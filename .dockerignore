@@ -1,0 +1,28 @@
+# Reinstalled inside the image by `npm ci`; copying the host tree would also
+# drag in platform-specific native binaries.
+node_modules
+dist
+
+.git
+.gitignore
+.github
+
+# Secrets and local overrides must never reach the build context.
+.env
+.env.*
+!.env.example
+
+# Local tooling and test artifacts.
+.design
+.playwright-mcp
+coverage
+*.tsbuildinfo
+.vscode
+.idea
+*.log
+npm-debug.log*
+
+Dockerfile
+docker-compose.yml
+.dockerignore
+README.md

@@ -1,0 +1,24 @@
+node_modules
+dist
+
+# Local configuration; copy .env.example instead of committing this.
+.env
+.env.local
+
+# Package manager caches
+.pnpm-store
+
+# Test and tooling artifacts
+.playwright-mcp/
+coverage/
+*.tsbuildinfo
+*.log
+npm-debug.log*
+
+# Design references and research, not part of the shipped product
+.design/
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
