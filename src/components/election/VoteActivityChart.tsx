@@ -15,7 +15,14 @@ import {
 } from 'recharts'
 import { PageSection } from '~components/shared/PageSection'
 import { Tooltip } from '~components/ui/Tooltip'
-import { buildActivityBuckets, defaultGranularity, type ElectionAnalytics, type Granularity } from '~hooks/useElectionAnalytics'
+import {
+  buildActivityBuckets,
+  buildServerActivityBuckets,
+  defaultGranularity,
+  type ElectionAnalytics,
+  type Granularity,
+} from '~hooks/useElectionAnalytics'
+import { useVoteActivity } from '~hooks/useVoconeApi'
 import { exportChartPng } from './chartExport'
 import { SegmentedControl } from './SegmentedControl'
 
@@ -49,11 +56,24 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
 
   const fallback = defaultGranularity(analytics.start, analytics.end)
   const granularity = override ?? fallback
+  const bucketParam = granularity === 'hours' ? 'hour' : 'day'
 
-  const buckets = useMemo(
+  // The server endpoint may 404 on an older gateway that predates the route,
+  // or on any other request error — either way this falls back to the
+  // client-side sampled timeline below, with no visual difference from before
+  // this endpoint existed.
+  const activity = useVoteActivity(electionId, bucketParam, { live: analytics.isLive })
+  const serverAvailable = activity.isSuccess && !!activity.data
+
+  const clientBuckets = useMemo(
     () => buildActivityBuckets(analytics.voteDates, analytics.start, analytics.end, granularity),
     [analytics.voteDates, analytics.start, analytics.end, granularity]
   )
+  const serverBuckets = useMemo(
+    () => buildServerActivityBuckets(activity.data, analytics.start, analytics.end, granularity),
+    [activity.data, analytics.start, analytics.end, granularity]
+  )
+  const buckets = serverAvailable ? serverBuckets : clientBuckets
 
   const baseNoun = buckets.unit === 'hours' ? 'hour' : 'day'
   const unitNoun = buckets.stride > 1 ? `${buckets.stride} ${baseNoun}s` : baseNoun
@@ -101,7 +121,7 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
         </HStack>
       }
     >
-      {!analytics.timelineReady && (
+      {!serverAvailable && !analytics.timelineReady && (
         <HStack justify='space-between' mb={3} flexWrap='wrap' gap={3}>
           <Button size='sm' onClick={analytics.loadTimeline} disabled={analytics.isTimelineLoading}>
             {analytics.isTimelineLoading ? 'Loading vote activity…' : 'Show vote activity over time'}
@@ -122,7 +142,7 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
         </HStack>
       )}
 
-      {analytics.timelineError && (
+      {!serverAvailable && analytics.timelineError && (
         <Alert.Root status='error' mb={3}>
           <Alert.Indicator />
           <Alert.Title>{analytics.timelineError}</Alert.Title>
@@ -136,7 +156,17 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
         </Alert.Root>
       )}
 
-      {!analytics.timelineError && analytics.datedVotes === 0 && analytics.totalVotes > 0 && (
+      {serverAvailable && (activity.data?.missingTimestamps ?? 0) > 0 && (
+        <Alert.Root status='info' mb={3}>
+          <Alert.Indicator />
+          <Alert.Title>
+            {activity.data?.missingTimestamps} votes lack a block timestamp on this gateway — counts may be
+            incomplete.
+          </Alert.Title>
+        </Alert.Root>
+      )}
+
+      {!serverAvailable && !analytics.timelineError && analytics.datedVotes === 0 && analytics.totalVotes > 0 && (
         <Alert.Root status='info' mb={3}>
           <Alert.Indicator />
           <Alert.Title>
@@ -146,7 +176,7 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
         </Alert.Root>
       )}
 
-      {buckets.downgraded && (
+      {!serverAvailable && buckets.downgraded && (
         <Alert.Root status='info' mb={3}>
           <Alert.Indicator />
           <Alert.Title>
@@ -208,7 +238,9 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
         )}
         {analytics.hasWindow && <Badge colorPalette='green'>Early votes {analytics.earlyVotes}</Badge>}
         {analytics.hasWindow && <Badge colorPalette='orange'>Late votes {analytics.lateVotes}</Badge>}
-        {analytics.timelineReady ? (
+        {serverAvailable ? (
+          <Badge colorPalette='green'>chart from server-aggregated activity ({activity.data?.totalVotes ?? 0})</Badge>
+        ) : analytics.timelineReady ? (
           <Badge colorPalette='green'>timeline from all loaded votes ({analytics.sampleSize})</Badge>
         ) : (
           analytics.sampleSize > 0 &&

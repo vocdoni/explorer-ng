@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useApi } from '~contexts/ApiContext'
 import type { FeesList } from '~hooks/useAccounts'
+import type { VoteActivityResponse } from '~hooks/useVoconeApi'
 import type { Election, TransactionsList, Vote } from '~types/api'
 import { parseApiDate } from '~utils/format'
 import { ApiError, fetchJson } from '~utils/http'
@@ -77,6 +78,13 @@ export const defaultGranularity = (start?: Date, end?: Date): Granularity => {
   if (!start || !end) return 'days'
   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
   return hours <= 48 ? 'hours' : 'days'
+}
+
+/** Matches the same "voting open" statuses `StatusTag` colors green, minus
+ *  "upcoming" — an election that hasn't opened yet has no activity to poll for. */
+const isLiveStatus = (status?: string) => {
+  const s = (status ?? '').toLowerCase()
+  return s.includes('ready') || s.includes('ongoing')
 }
 
 const labelFor = (date: Date, unit: Granularity, multiDay: boolean) => {
@@ -159,6 +167,96 @@ export const buildActivityBuckets = (
   }
 }
 
+const parsePeriod = (period: string): Date | undefined => {
+  const d = new Date(period)
+  return Number.isNaN(d.getTime()) ? undefined : d
+}
+
+/** UTC counterparts of `advance`/`floorTo`. Server bucket periods are UTC
+ *  strftime boundaries ("...T13:00:00Z", "...T00:00:00Z"), so the gap-filled
+ *  edges have to walk the calendar in UTC to line up with them — using the
+ *  viewer's local calendar here would misalign every bar near a DST change or
+ *  a non-UTC offset. */
+const advanceUTC = (date: Date, unit: Granularity, steps = 1) => {
+  const next = new Date(date)
+  if (unit === 'hours') next.setUTCHours(next.getUTCHours() + steps)
+  else next.setUTCDate(next.getUTCDate() + steps)
+  return next
+}
+
+const floorToUTC = (date: Date, unit: Granularity) => {
+  const floored = new Date(date)
+  floored.setUTCMinutes(0, 0, 0)
+  if (unit === 'days') floored.setUTCHours(0, 0, 0, 0)
+  return floored
+}
+
+/**
+ * Turn the sparse server response into the same dense `ActivityBuckets` shape
+ * the client-side builder produces, filling every zero-vote period across the
+ * election window (the server omits empty buckets to keep the payload small).
+ *
+ * Unlike `buildActivityBuckets`, this never downgrades or widens the bin: the
+ * server already picked the bucket width, so `stride` is always 1 and
+ * `downgraded` always false. A generous safety cap still bounds the walk so a
+ * malformed election window can't spin the loop forever.
+ */
+export const buildServerActivityBuckets = (
+  response: VoteActivityResponse | undefined,
+  start?: Date,
+  end?: Date,
+  requested: Granularity = 'days'
+): ActivityBuckets => {
+  const empty: ActivityBuckets = {
+    bins: [],
+    unit: requested,
+    requested,
+    downgraded: false,
+    stride: 1,
+    peakIndex: -1,
+    peakVotes: 0,
+  }
+  if (!response || !start || !end || end.getTime() <= start.getTime()) return empty
+
+  const unit: Granularity = response.bucket === 'hour' ? 'hours' : 'days'
+  const countByPeriod = new Map<number, number>()
+  for (const b of response.buckets) {
+    const d = parsePeriod(b.period)
+    if (d) countByPeriod.set(d.getTime(), b.count)
+  }
+
+  const multiDay = end.getTime() - start.getTime() > 24 * 60 * 60 * 1000
+  const cursorEnd = floorToUTC(end, unit)
+
+  const edges: Date[] = []
+  let cursor = floorToUTC(start, unit)
+  let guard = 0
+  while (cursor.getTime() <= cursorEnd.getTime() && guard <= MAX_BINS * 20) {
+    edges.push(cursor)
+    cursor = advanceUTC(cursor, unit)
+    guard += 1
+  }
+  if (edges.length === 0) edges.push(floorToUTC(start, unit))
+
+  let running = 0
+  const bins = edges.map((edge) => {
+    const votes = countByPeriod.get(edge.getTime()) ?? 0
+    running += votes
+    return {
+      key: edge.toISOString(),
+      label: labelFor(edge, unit, multiDay),
+      fullLabel: labelFor(edge, unit, true),
+      votes,
+      cumulative: running,
+    }
+  })
+
+  const peakVotes = bins.reduce((max, b) => Math.max(max, b.votes), 0)
+  const peakIndex = peakVotes > 0 ? bins.findIndex((b) => b.votes === peakVotes) : -1
+
+  return { bins, unit, requested, downgraded: false, stride: 1, peakIndex, peakVotes }
+}
+
 interface TimelineProgress {
   loaded: number
   total: number
@@ -227,6 +325,9 @@ export interface ElectionAnalytics {
   hasWindow: boolean
   start?: Date
   end?: Date
+  /** True while the election is still accepting votes ("ready"/"ongoing"
+   *  status) — the only state worth polling the activity endpoint for. */
+  isLive: boolean
   /** Timestamps recovered from the loaded votes, sorted ascending. */
   voteDates: Date[]
   /** How many of the loaded votes carried a usable timestamp. */
@@ -309,6 +410,7 @@ export const useElectionAnalytics = (
       hasWindow,
       start,
       end,
+      isLive: isLiveStatus(election?.status),
       voteDates,
       datedVotes: voteDates.length,
       sampleSize: votesForTimeline.length,

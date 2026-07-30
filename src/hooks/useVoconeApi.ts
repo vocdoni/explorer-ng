@@ -349,3 +349,42 @@ export const useOrganizationMeta = (organizationId: string) => {
   const org = useOrganization(organizationId)
   return { ...org, meta: organizationMetaFrom(org.data?.metadata) }
 }
+
+export interface VoteActivityBucket {
+  period: string
+  count: number
+}
+
+export interface VoteActivityResponse {
+  buckets: VoteActivityBucket[]
+  totalVotes: number
+  missingTimestamps: number
+  bucket: 'hour' | 'day'
+}
+
+/**
+ * `GET /elections/{id}/votes/activity?bucket=hour|day` — server-side vote
+ * timeline aggregation. Replaces the expensive client-side walk of every
+ * `/votes` page for gateways that expose the route.
+ *
+ * Any failure (404 on an unknown election, or a 404/other error on an older
+ * gateway that predates the route) is treated identically: the caller falls
+ * back to the client-side timeline, so this never retries.
+ *
+ * `live` gates polling: only elections still accepting votes benefit from a
+ * refresh, and polling a closed election's activity would just repeat the
+ * same request forever.
+ */
+export const useVoteActivity = (electionId: string, bucket: 'hour' | 'day', options?: { live?: boolean }) => {
+  const { apiUrl, refreshMs } = useApi()
+  return useQuery({
+    queryKey: ['election-vote-activity', apiUrl, electionId, bucket],
+    queryFn: () => fetchJson<VoteActivityResponse>(q(apiUrl, `/elections/${electionId}/votes/activity?bucket=${bucket}`)),
+    enabled: !!electionId,
+    refetchInterval: options?.live ? refreshMs : false,
+    retry: false,
+    // Keep the previous bucket's bars on screen while the new one loads, so
+    // toggling Hours/Days doesn't blank the chart during the round trip.
+    placeholderData: (prev) => prev,
+  })
+}
