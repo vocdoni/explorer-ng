@@ -156,6 +156,16 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
         </Alert.Root>
       )}
 
+      {serverAvailable && (activity.data?.undatedVotes ?? 0) > 0 && (
+        <Alert.Root status='info' mb={3}>
+          <Alert.Indicator />
+          <Alert.Title>
+            {activity.data?.undatedVotes} of {(activity.data?.totalVotes ?? 0) + (activity.data?.undatedVotes ?? 0)}{' '}
+            votes cannot be dated on this gateway and are not plotted.
+          </Alert.Title>
+        </Alert.Root>
+      )}
+
 
       {!serverAvailable && !analytics.timelineError && analytics.datedVotes === 0 && analytics.totalVotes > 0 && (
         <Alert.Root status='info' mb={3}>

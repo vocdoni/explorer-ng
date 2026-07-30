@@ -434,6 +434,9 @@ export interface VoteActivityBucket {
 export interface VoteActivityResponse {
   buckets: VoteActivityBucket[]
   totalVotes: number
+  /** Votes whose block timestamp is unavailable on this gateway (e.g. pruned
+   *  or state-synced nodes) — counted but not plottable. */
+  undatedVotes?: number
   bucket: 'hour' | 'day'
 }
 
