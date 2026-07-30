@@ -1,7 +1,8 @@
-# Reinstalled inside the image by `npm ci`; copying the host tree would also
-# drag in platform-specific native binaries.
+# Reinstalled inside the image by `pnpm install`; copying the host tree would
+# also drag in platform-specific native binaries.
 node_modules
 dist
+.pnpm-store
 
 .git
 .gitignore
@@ -20,7 +21,7 @@ coverage
 .vscode
 .idea
 *.log
-npm-debug.log*
+pnpm-debug.log*
 
 Dockerfile
 docker-compose.yml

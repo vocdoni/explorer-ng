@@ -1,0 +1,10 @@
+# pnpm reads its settings from this file; the `pnpm` field in package.json is
+# ignored as of pnpm 11. There is no `packages:` key on purpose — this is a
+# single-package repo, not a workspace.
+
+# Dependency build scripts are blocked by default, and pnpm exits non-zero when
+# it skips one, which would fail CI. esbuild's postinstall links the
+# platform-specific binary that `vite build` and `chakra typegen` shell out to,
+# so both resolved copies (vite 5 -> 0.21, @chakra-ui/cli -> 0.28) are allowed.
+allowBuilds:
+  esbuild: true

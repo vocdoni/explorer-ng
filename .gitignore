@@ -13,7 +13,7 @@ dist
 coverage/
 *.tsbuildinfo
 *.log
-npm-debug.log*
+pnpm-debug.log*
 
 # Design references and research, not part of the shipped product
 .design/
