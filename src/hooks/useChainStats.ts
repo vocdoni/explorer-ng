@@ -2,6 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { useApi } from '~contexts/ApiContext'
 import type { BlockListItem, ElectionsList, TransactionsList } from '~types/api'
 import type { TransfersList } from '~hooks/useAccounts'
+import { useGatewayCapabilities } from '~hooks/useGatewayCapabilities'
 import { useBlocks } from '~hooks/useVoconeApi'
 import { transactionTypeLabel } from '~utils/txLabels'
 import { fetchJson } from '~utils/http'
@@ -74,17 +75,27 @@ const toBreakdown = (
   }
 }
 
-/** Every transaction ever recorded, grouped by what it actually did.
- *  Cost: one tiny request per type (6). */
+/**
+ * Every transaction ever recorded, grouped by what it actually did.
+ *
+ * On a gateway new enough to expose `GET /chain/stats`, this reads straight
+ * off `txCountByType` — the single probe already paid for elsewhere covers
+ * it, so no further request is made. Older gateways fall back to one tiny
+ * `limit=1` request per type (6), and that fan-out only starts once the
+ * capability probe itself has settled, so the two paths never race.
+ */
 export const useTxTypeBreakdown = (): Breakdown => {
   const { apiUrl } = useApi()
-  return useQueries({
+  const gateway = useGatewayCapabilities()
+  const legacyEnabled = !gateway.isLoading && !gateway.isNew
+  const legacy = useQueries({
     queries: TX_TYPE_SLICES.map(({ key }) => ({
       queryKey: ['tx-type-count', apiUrl, key],
       queryFn: async () => {
         const list = await fetchJson<TransactionsList>(q(apiUrl, `/chain/transactions?limit=1&type=${key}`))
         return list.pagination?.totalItems ?? 0
       },
+      enabled: legacyEnabled,
       staleTime: BREAKDOWN_STALE_MS,
       gcTime: BREAKDOWN_STALE_MS,
       retry: false,
@@ -96,19 +107,36 @@ export const useTxTypeBreakdown = (): Breakdown => {
         results.some((r) => r.isLoading)
       ),
   })
+
+  if (gateway.isNew && gateway.stats) {
+    return toBreakdown(
+      TX_TYPE_SLICES.map(({ key, color }) => ({ key, label: transactionTypeLabel(key), color })),
+      TX_TYPE_SLICES.map(({ key }) => gateway.stats?.txCountByType?.[key]),
+      false
+    )
+  }
+  return legacy
 }
 
-/** Every election ever created, grouped by where it is in its lifecycle.
- *  Cost: one tiny request per status (5). */
+/**
+ * Every election ever created, grouped by where it is in its lifecycle.
+ *
+ * Same feature-detection as {@link useTxTypeBreakdown}: `electionCountByStatus`
+ * from `/chain/stats` when available, otherwise one `limit=1` request per
+ * status (5), deferred until the capability probe has an answer.
+ */
 export const useElectionStatusBreakdown = (): Breakdown => {
   const { apiUrl } = useApi()
-  return useQueries({
+  const gateway = useGatewayCapabilities()
+  const legacyEnabled = !gateway.isLoading && !gateway.isNew
+  const legacy = useQueries({
     queries: ELECTION_STATUS_SLICES.map(({ key }) => ({
       queryKey: ['election-status-count', apiUrl, key],
       queryFn: async () => {
         const list = await fetchJson<ElectionsList>(q(apiUrl, `/elections?limit=1&status=${key}`))
         return list.pagination?.totalItems ?? 0
       },
+      enabled: legacyEnabled,
       staleTime: BREAKDOWN_STALE_MS,
       gcTime: BREAKDOWN_STALE_MS,
       retry: false,
@@ -120,6 +148,15 @@ export const useElectionStatusBreakdown = (): Breakdown => {
         results.some((r) => r.isLoading)
       ),
   })
+
+  if (gateway.isNew && gateway.stats) {
+    return toBreakdown(
+      ELECTION_STATUS_SLICES,
+      ELECTION_STATUS_SLICES.map(({ key }) => gateway.stats?.electionCountByStatus?.[key]),
+      false
+    )
+  }
+  return legacy
 }
 
 export interface ActivityPoint {
@@ -178,19 +215,32 @@ export const useBlockActivity = (limit = 40): BlockActivity => {
  * Total number of accounts that exist on chain. Distinct from
  * `chain/info.organizationCount`, which counts only the accounts that have
  * created at least one election.
+ *
+ * Reads `accountCount` off `/chain/stats` when the gateway exposes it —
+ * folding this into the same probe used by the breakdown donuts — and falls
+ * back to the `limit=1` counting trick on older gateways, again deferred
+ * until the probe itself has settled.
  */
 export const useAccountCount = () => {
   const { apiUrl } = useApi()
-  return useQuery({
+  const gateway = useGatewayCapabilities()
+  const legacyEnabled = !gateway.isLoading && !gateway.isNew
+  const legacy = useQuery({
     queryKey: ['account-count', apiUrl],
     queryFn: async () => {
       const list = await fetchJson<{ pagination?: { totalItems?: number } }>(q(apiUrl, '/accounts?limit=1'))
       return list.pagination?.totalItems ?? 0
     },
+    enabled: legacyEnabled,
     staleTime: BREAKDOWN_STALE_MS,
     gcTime: BREAKDOWN_STALE_MS,
     retry: false,
   })
+
+  if (gateway.isNew && gateway.stats) {
+    return { ...legacy, data: gateway.stats.accountCount, isLoading: false, isSuccess: true }
+  }
+  return legacy
 }
 
 /**
@@ -201,11 +251,11 @@ export const useAccountCount = () => {
  * changes with every new block, so this rides the shared poll interval rather
  * than the hard-cached breakdown queries above.
  */
-export const useLatestTransfers = (limit = 5) => {
+export const useLatestTransfers = (limit = 5, pollMs?: number) => {
   const { apiUrl, refreshMs } = useApi()
   return useQuery({
     queryKey: ['latest-transfers', apiUrl, limit],
     queryFn: () => fetchJson<TransfersList>(q(apiUrl, `/chain/transfers?page=0&limit=${limit}`)),
-    refetchInterval: refreshMs,
+    refetchInterval: pollMs ?? refreshMs,
   })
 }

@@ -7,7 +7,7 @@ import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import { useUrlListState } from '~hooks/useUrlListState'
-import { useElectionTitles, useElections } from '~hooks/useVoconeApi'
+import { useElections, useResolvedElectionTitles } from '~hooks/useVoconeApi'
 
 const DEFAULTS = { page: '0', status: '', organizationId: '', electionId: '' }
 
@@ -44,7 +44,7 @@ const ElectionsPage = () => {
     state.electionId || undefined
   )
   const elections = q.data?.elections ?? []
-  const { titles } = useElectionTitles(elections.map((e) => e.electionId))
+  const { titles } = useResolvedElectionTitles(elections)
 
   return (
     <Grid gap={6}>

@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { useApi } from '~contexts/ApiContext'
 import { organizationMetaFrom, type OrganizationMeta } from '~hooks/useVoconeApi'
 import type { OrganizationAccount, OrganizationsList, OrganizationSummary } from '~types/api'
@@ -94,10 +94,10 @@ export interface OrgSearchMatch {
  * row already rendered costs nothing and no request is repeated within the
  * stale window.
  */
-export const useOrgNameSearch = (query: string) => {
+export const useOrgNameSearch = (query: string, gate = true) => {
   const { apiUrl } = useApi()
   const needle = foldForSearch(query)
-  const active = needle.length > 0
+  const active = needle.length > 0 && gate
 
   const directory = useQueries({
     queries: Array.from({ length: ORG_SEARCH_PAGES }, (_, page) => ({
@@ -154,4 +154,36 @@ export const useOrgNameSearch = (query: string) => {
       }
     },
   })
+}
+
+/**
+ * Name search on gateways new enough to filter `/chain/organizations` by
+ * `?name=` server-side (see `useGatewayCapabilities`) — one request instead
+ * of the up-to-{@link ORG_SEARCH_DEPTH}-organization sweep in
+ * {@link useOrgNameSearch}. Only call this once the gateway is known-new;
+ * an older gateway would silently ignore the filter and return everything.
+ */
+export const useOrgServerSearch = (query: string, gate = true) => {
+  const { apiUrl } = useApi()
+  const needle = query.trim()
+  const active = needle.length > 0 && gate
+
+  const result = useQuery({
+    queryKey: ['organizations-search', apiUrl, needle],
+    queryFn: () =>
+      fetchJson<OrganizationsList>(
+        q(apiUrl, `/chain/organizations?page=0&limit=${ORG_SEARCH_PAGE_SIZE}&name=${encodeURIComponent(needle)}`)
+      ),
+    enabled: active,
+    staleTime: ORG_STATS_STALE_MS,
+    gcTime: ORG_STATS_STALE_MS,
+    retry: false,
+    refetchInterval: false as const,
+  })
+
+  return {
+    active,
+    orgs: result.data?.organizations ?? [],
+    isLoading: result.isLoading,
+  }
 }

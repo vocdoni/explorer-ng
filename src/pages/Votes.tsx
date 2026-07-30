@@ -5,6 +5,7 @@ import { HashDisplay } from '~components/shared/HashDisplay'
 import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
+import { RelativeTime } from '~components/shared/RelativeTime'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useVotes } from '~hooks/useVoconeApi'
@@ -54,9 +55,13 @@ const VotesPage = () => {
                     <HashDisplay value={v.voterID} copyLabel='Voter ID' />
                   </Table.Cell>
                   <Table.Cell textAlign='end'>
-                    <Link asChild variant='plain'>
-                      <RouterLink to={`/blocks/${v.blockHeight ?? ''}`}>block {v.blockHeight ?? 0}</RouterLink>
-                    </Link>
+                    {v.blockTime ? (
+                      <RelativeTime value={v.blockTime} mode='relative' fontSize='sm' />
+                    ) : (
+                      <Link asChild variant='plain'>
+                        <RouterLink to={`/blocks/${v.blockHeight ?? ''}`}>block {v.blockHeight ?? 0}</RouterLink>
+                      </Link>
+                    )}
                   </Table.Cell>
                 </Table.Row>
               ))}

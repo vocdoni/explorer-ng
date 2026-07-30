@@ -9,7 +9,8 @@ import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import type { OrgStats } from '~hooks/useOrgStats'
-import { ORG_SEARCH_DEPTH, useOrgNameSearch, useOrgStats } from '~hooks/useOrgStats'
+import { ORG_SEARCH_DEPTH, useOrgNameSearch, useOrgServerSearch, useOrgStats } from '~hooks/useOrgStats'
+import { useGatewayCapabilities } from '~hooks/useGatewayCapabilities'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useOrganizations } from '~hooks/useVoconeApi'
 import type { OrganizationSummary } from '~types/api'
@@ -100,29 +101,65 @@ const OrganizationsPage = () => {
   const idFilter = looksLikeId(query) ? query.replace(/^0x/i, '').toLowerCase() : ''
   const nameQuery = query && !idFilter ? query : ''
 
+  // `/chain/stats` doubles as the capability probe: gateways that expose it
+  // also accept `?name=` on `/chain/organizations`, so a real one-request
+  // search replaces the up-to-`ORG_SEARCH_DEPTH`-organization client sweep.
+  // The legacy sweep only starts once the probe has confirmed the gateway is
+  // old, so the two paths never race each other.
+  const gateway = useGatewayCapabilities()
+  const legacyGate = !gateway.isLoading && !gateway.isNew
+  const serverSearch = useOrgServerSearch(nameQuery, gateway.isNew)
+  const legacySearch = useOrgNameSearch(nameQuery, legacyGate)
+
   const organizations = useOrganizations(page, 24, idFilter || undefined)
-  const search = useOrgNameSearch(nameQuery)
+
+  const search = gateway.isNew
+    ? { active: serverSearch.active, rows: serverSearch.orgs, scanned: serverSearch.orgs.length, isLoading: serverSearch.isLoading }
+    : {
+        active: legacySearch.active,
+        rows: legacySearch.matches.map((m) => m.org),
+        scanned: legacySearch.scanned,
+        isLoading: legacySearch.isLoading,
+      }
 
   const sorted = useMemo(() => {
-    const items = search.active
-      ? search.matches.map((m) => m.org)
-      : [...(organizations.data?.organizations ?? [])]
+    const items = search.active ? [...search.rows] : [...(organizations.data?.organizations ?? [])]
     items.sort((a, b) =>
       sort === 'elections-desc' ? b.electionCount - a.electionCount : a.electionCount - b.electionCount
     )
     return items
-  }, [organizations.data?.organizations, search.active, search.matches, sort])
+  }, [organizations.data?.organizations, search.active, search.rows, sort])
 
-  const pageStats = useOrgStats(search.active ? [] : sorted.map((o) => o.organizationID))
-  const searchStats = useMemo(() => {
+  // Balance/fees have no list-row equivalent on any gateway, so they still
+  // need one `/accounts/{id}` request per row regardless of search mode —
+  // this is the same query the legacy sweep already issues, so react-query
+  // dedupes rather than doubling the fan-out.
+  const pageStats = useOrgStats(sorted.map((o) => o.organizationID))
+  const legacySearchStats = useMemo(() => {
     const byId: Record<string, OrgStats | undefined> = {}
-    search.matches.forEach((m) => (byId[m.org.organizationID] = m.stats))
+    legacySearch.matches.forEach((m) => (byId[m.org.organizationID] = m.stats))
     return byId
-  }, [search.matches])
+  }, [legacySearch.matches])
 
-  const stats = search.active ? searchStats : pageStats.stats
-  const statsLoading = search.active ? search.isLoading : pageStats.isLoading
-  const enrichedIds = search.active ? sorted.map((o) => o.organizationID) : pageStats.capped
+  // Rows that already carry `name`/`avatar` from the list/search response
+  // (new gateways) render immediately without waiting on `pageStats`; older
+  // gateways or missing rows still fall back to it.
+  const stats = useMemo(() => {
+    const merged: Record<string, OrgStats | undefined> = {}
+    sorted.forEach((o) => {
+      const base = search.active && !gateway.isNew ? legacySearchStats[o.organizationID] : pageStats.stats[o.organizationID]
+      if (o.name !== undefined || o.avatar !== undefined || base) {
+        merged[o.organizationID] = { ...base, name: o.name ?? base?.name, avatar: o.avatar ?? base?.avatar }
+      }
+    })
+    return merged
+  }, [sorted, search.active, gateway.isNew, legacySearchStats, pageStats.stats])
+
+  const statsLoading = search.active && !gateway.isNew ? legacySearch.isLoading : pageStats.isLoading
+  // A row with a server-provided name is treated as enriched right away —
+  // balance/fees may still show "—" rather than block on the full fan-out.
+  const enrichedIds = sorted.filter((o) => o.name !== undefined).map((o) => o.organizationID)
+  const enrichedSet = new Set([...enrichedIds, ...pageStats.capped])
   const listLoading = search.active ? search.isLoading : organizations.isLoading
 
   return (
@@ -161,11 +198,15 @@ const OrganizationsPage = () => {
         <HStack gap={2} fontSize='sm' color='texts.subtle'>
           {search.isLoading && <Spinner size='xs' />}
           <Text>
-            {search.isLoading
-              ? `Reading names for the first ${ORG_SEARCH_DEPTH.toLocaleString()} organizations in the index…`
-              : `Searched the names of the first ${search.scanned.toLocaleString()} organizations in the index — ` +
-                `${sorted.length.toLocaleString()} ${sorted.length === 1 ? 'match' : 'matches'}. ` +
-                'Names are stored off-chain, so this search cannot reach deeper; paste an organization ID to look one up directly.'}
+            {gateway.isNew
+              ? search.isLoading
+                ? 'Searching organization names…'
+                : `${sorted.length.toLocaleString()} ${sorted.length === 1 ? 'match' : 'matches'} for "${nameQuery}".`
+              : search.isLoading
+                ? `Reading names for the first ${ORG_SEARCH_DEPTH.toLocaleString()} organizations in the index…`
+                : `Searched the names of the first ${search.scanned.toLocaleString()} organizations in the index — ` +
+                  `${sorted.length.toLocaleString()} ${sorted.length === 1 ? 'match' : 'matches'}. ` +
+                  'Names are stored off-chain, so this search cannot reach deeper; paste an organization ID to look one up directly.'}
           </Text>
         </HStack>
       )}
@@ -190,7 +231,7 @@ const OrganizationsPage = () => {
                   org={o}
                   stats={stats[o.organizationID]}
                   statsLoading={statsLoading}
-                  enriched={enrichedIds.includes(o.organizationID)}
+                  enriched={enrichedSet.has(o.organizationID)}
                 />
               ))}
             </Table.Body>

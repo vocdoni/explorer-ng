@@ -34,7 +34,13 @@ export const LifecycleTimeline = ({ electionId, election, encrypted, creationHei
   const feeRows = (fees.data?.fees ?? []).filter((fee) => fee.reference?.toLowerCase() === electionId.toLowerCase())
   const statusFee = feeRows.find((fee) => fee.txType === 'set_process_status')
   const creationFee = feeRows.find((fee) => fee.txType === 'new_process')
-  const reveal = useKeyRevealHeight(encrypted, statusFee?.height)
+  // Gateways that index the election->key-reveal link report it directly on
+  // the election record, skipping the block-scan heuristic entirely.
+  const known =
+    election?.keyRevealHeight !== undefined
+      ? { height: election.keyRevealHeight, hash: election.keyRevealTxHash }
+      : undefined
+  const reveal = useKeyRevealHeight(encrypted, statusFee?.height, known)
 
   const now = Date.now()
   const created = parseApiDate(election?.creationTime)

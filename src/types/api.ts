@@ -29,6 +29,10 @@ export interface ChainInfo {
 export interface OrganizationSummary {
   organizationID: string
   electionCount: number
+  /** Optional: only present on gateways new enough to inline org metadata
+   *  straight into the list row (see `useGatewayCapabilities`). */
+  name?: string
+  avatar?: string
 }
 
 export interface OrganizationsList {
@@ -59,6 +63,9 @@ export interface ElectionSummary {
   result?: string[][]
   manuallyEnded: boolean
   chainId: string
+  /** Optional: only present on gateways new enough to inline the metadata
+   *  title straight into the list row (see `useGatewayCapabilities`). */
+  title?: string
 }
 
 /**
@@ -105,6 +112,12 @@ export interface Election {
     censusURL?: string
     maxCensusSize?: number
   }
+  /** Optional: block height/tx hash of the `reveal_process_keys` transaction,
+   *  populated only on gateways that index election->key-reveal linkage (see
+   *  `useGatewayCapabilities`). Absent elsewhere, including on unencrypted
+   *  elections that never reveal keys. */
+  keyRevealHeight?: number
+  keyRevealTxHash?: string
 }
 
 export interface ElectionsList {
@@ -124,6 +137,11 @@ export interface Vote {
   package?: unknown
   weight?: string
   encryptionKeys?: number[]
+  /** Optional: RFC3339 timestamp of the block this vote was sealed into, only
+   *  on gateways new enough to inline it into list rows (see
+   *  `useGatewayCapabilities`). List rows otherwise carry no timestamp at
+   *  all — `date` is a detail-endpoint-only field. */
+  blockTime?: string
 }
 
 export interface VotesList {

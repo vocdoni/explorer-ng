@@ -450,16 +450,25 @@ export const useElectionFees = (electionId: string, page = 0) => {
  * revealed.
  *
  * There is no endpoint mapping an election to its key-reveal transactions, so
- * this probes the handful of blocks right after the `set_process_status` fee
- * (the close moment) for `reveal_process_keys` transactions. It is bounded to
- * a few requests, only runs for encrypted elections, and resolves to `null`
+ * this normally probes the handful of blocks right after the
+ * `set_process_status` fee (the close moment) for `reveal_process_keys`
+ * transactions. Gateways new enough to index the link directly report it on
+ * the election record itself (`keyRevealHeight`/`keyRevealTxHash`, see
+ * `useGatewayCapabilities`); when `known` is supplied, that answer is
+ * returned synchronously and the scan never runs. The scan is bounded to a
+ * few requests, only runs for encrypted elections, and resolves to `null`
  * rather than erroring when the window turns up nothing.
  */
-export const useKeyRevealHeight = (encrypted: boolean, closeHeight?: number) => {
+export const useKeyRevealHeight = (
+  encrypted: boolean,
+  closeHeight?: number,
+  known?: { height: number; hash?: string }
+) => {
   const { apiUrl } = useApi()
   return useQuery({
-    queryKey: ['election-key-reveal', apiUrl, closeHeight],
+    queryKey: known ? ['election-key-reveal-known', known.height, known.hash] : ['election-key-reveal', apiUrl, closeHeight],
     queryFn: async () => {
+      if (known) return { height: known.height, hash: known.hash }
       for (let offset = 1; offset <= 5; offset++) {
         try {
           const list = await fetchJson<TransactionsList>(
@@ -473,7 +482,7 @@ export const useKeyRevealHeight = (encrypted: boolean, closeHeight?: number) => 
       }
       return null
     },
-    enabled: encrypted && !!closeHeight,
+    enabled: encrypted && (!!closeHeight || !!known),
     staleTime: Infinity,
     gcTime: Infinity,
     retry: false,
