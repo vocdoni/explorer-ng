@@ -358,7 +358,6 @@ export interface VoteActivityBucket {
 export interface VoteActivityResponse {
   buckets: VoteActivityBucket[]
   totalVotes: number
-  missingTimestamps: number
   bucket: 'hour' | 'day'
 }
 

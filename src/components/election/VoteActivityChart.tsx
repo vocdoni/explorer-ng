@@ -156,15 +156,6 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
         </Alert.Root>
       )}
 
-      {serverAvailable && (activity.data?.missingTimestamps ?? 0) > 0 && (
-        <Alert.Root status='info' mb={3}>
-          <Alert.Indicator />
-          <Alert.Title>
-            {activity.data?.missingTimestamps} votes lack a block timestamp on this gateway — counts may be
-            incomplete.
-          </Alert.Title>
-        </Alert.Root>
-      )}
 
       {!serverAvailable && !analytics.timelineError && analytics.datedVotes === 0 && analytics.totalVotes > 0 && (
         <Alert.Root status='info' mb={3}>
