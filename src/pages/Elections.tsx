@@ -1,13 +1,15 @@
 import { Button, Grid, Input, NativeSelect, Table } from '@chakra-ui/react'
-import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { ElectionListRow } from '~components/election-list/ElectionListRow'
 import { EmptyState } from '~components/shared/EmptyState'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
+import { useUrlListState } from '~hooks/useUrlListState'
 import { useElectionTitles, useElections } from '~hooks/useVoconeApi'
+
+const DEFAULTS = { page: '0', status: '', organizationId: '', electionId: '' }
 
 const STATUS_OPTIONS = [
   { value: 'ready', label: 'Voting open' },
@@ -18,20 +20,28 @@ const STATUS_OPTIONS = [
 ]
 
 const ElectionsPage = () => {
-  const [searchParams] = useSearchParams()
-  const initialOrg = searchParams.get('organizationId') ?? ''
-  const [page, setPage] = useState(0)
-  const [status, setStatus] = useState('')
-  const [organizationId, setOrganizationId] = useState(initialOrg)
-  const [electionId, setElectionId] = useState('')
-  const [applied, setApplied] = useState({ status: '', organizationId: initialOrg, electionId: '' })
+  // Applied filters + page live in the URL, so Back from an election restores
+  // this exact view. The three inputs keep local drafts until "Apply filters".
+  const { state, setState, num } = useUrlListState(DEFAULTS)
+  const page = num('page')
+  const [status, setStatus] = useState(state.status)
+  const [organizationId, setOrganizationId] = useState(state.organizationId)
+  const [electionId, setElectionId] = useState(state.electionId)
+
+  // Re-seed the drafts when the URL changes underneath us (Back/Forward, or a
+  // link that arrives with ?organizationId= already set).
+  useEffect(() => {
+    setStatus(state.status)
+    setOrganizationId(state.organizationId)
+    setElectionId(state.electionId)
+  }, [state.status, state.organizationId, state.electionId])
 
   const q = useElections(
     page,
     20,
-    applied.status || undefined,
-    applied.organizationId || undefined,
-    applied.electionId || undefined
+    state.status || undefined,
+    state.organizationId || undefined,
+    state.electionId || undefined
   )
   const elections = q.data?.elections ?? []
   const { titles } = useElectionTitles(elections.map((e) => e.electionId))
@@ -58,24 +68,10 @@ const ElectionsPage = () => {
           onChange={(e) => setOrganizationId(e.target.value)}
         />
         <Input placeholder='Election ID' value={electionId} onChange={(e) => setElectionId(e.target.value)} />
-        <Button
-          onClick={() => {
-            setApplied({ status, organizationId, electionId })
-            setPage(0)
-          }}
-        >
+        <Button onClick={() => setState({ status, organizationId, electionId, page: DEFAULTS.page })}>
           Apply filters
         </Button>
-        <Button
-          variant='outline'
-          onClick={() => {
-            setStatus('')
-            setOrganizationId('')
-            setElectionId('')
-            setApplied({ status: '', organizationId: '', electionId: '' })
-            setPage(0)
-          }}
-        >
+        <Button variant='outline' onClick={() => setState({ ...DEFAULTS })}>
           Clear
         </Button>
       </Grid>
@@ -106,7 +102,11 @@ const ElectionsPage = () => {
         )}
       </PageSection>
 
-      <PaginationControls page={page} totalPages={q.data?.pagination?.totalPages} onChange={setPage} />
+      <PaginationControls
+        page={page}
+        totalPages={q.data?.pagination?.totalPages}
+        onChange={(next) => setState({ page: String(next) })}
+      />
     </Grid>
   )
 }

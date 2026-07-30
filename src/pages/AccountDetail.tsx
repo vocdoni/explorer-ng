@@ -10,10 +10,14 @@ import { StatTile } from '~components/shared/StatTile'
 import { TechnicalDetails, TechnicalField } from '~components/shared/TechnicalDetails'
 import { organizationMetaFrom } from '~hooks/useVoconeApi'
 import { useAccount } from '~hooks/useAccounts'
+import { useUrlListState } from '~hooks/useUrlListState'
 import { shortHex } from '~utils/format'
+
+const DEFAULTS = { tab: 'transfers' }
 
 const AccountDetailPage = () => {
   const { address = '' } = useParams()
+  const { state, setState } = useUrlListState(DEFAULTS)
   const account = useAccount(address)
   const meta = organizationMetaFrom(account.data?.metadata)
   const isOrganization = (account.data?.electionIndex ?? 0) > 0
@@ -45,7 +49,7 @@ const AccountDetailPage = () => {
         <StatTile label='Fees paid' value={account.data?.feesCount ?? 0} help='Transactions this account paid a fee for.' />
       </SimpleGrid>
 
-      <Tabs.Root defaultValue='transfers' lazyMount>
+      <Tabs.Root value={state.tab} onValueChange={(e) => setState({ tab: e.value })} lazyMount>
         <Tabs.List mb={6}>
           <Tabs.Trigger value='transfers'>Token transfers</Tabs.Trigger>
           <Tabs.Trigger value='fees'>Fees paid</Tabs.Trigger>

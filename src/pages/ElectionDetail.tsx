@@ -10,7 +10,7 @@ import {
   Tabs,
   Text,
 } from '@chakra-ui/react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import { BallotConfigCard } from '~components/election/BallotConfigCard'
 import { ElectionCostPanel } from '~components/election/ElectionCostPanel'
@@ -26,6 +26,7 @@ import { RelativeTime } from '~components/shared/RelativeTime'
 import { StatTile } from '~components/shared/StatTile'
 import { TechnicalDetails, TechnicalField } from '~components/shared/TechnicalDetails'
 import { useElectionAnalytics } from '~hooks/useElectionAnalytics'
+import { useUrlListState } from '~hooks/useUrlListState'
 import {
   electionMetaFrom,
   useDateToBlock,
@@ -47,10 +48,13 @@ const localizedText = (value?: LocalizedText | string): string | undefined => {
   return value.default ?? Object.values(value).find((v) => typeof v === 'string' && v.trim())
 }
 
+const DEFAULTS = { tab: 'questions', votesPage: '0', feesPage: '0' }
+
 const ElectionDetailPage = () => {
   const { electionId = '' } = useParams()
-  const [page, setPage] = useState(0)
-  const [feesPage, setFeesPage] = useState(0)
+  const { state, setState, num } = useUrlListState(DEFAULTS)
+  const page = num('votesPage')
+  const feesPage = num('feesPage')
   const election = useElection(electionId)
   const votes = useElectionVotes(electionId, page, 20)
   const voteAnalytics = useElectionVotes(electionId, 0, 300)
@@ -130,7 +134,7 @@ const ElectionDetailPage = () => {
         </Alert.Root>
       )}
 
-      <Tabs.Root defaultValue='questions' lazyMount>
+      <Tabs.Root value={state.tab} onValueChange={(e) => setState({ tab: e.value })} lazyMount>
         <Tabs.List mb={6}>
           <Tabs.Trigger value='questions'>Questions &amp; results</Tabs.Trigger>
           <Tabs.Trigger value='participation'>Participation</Tabs.Trigger>
@@ -217,7 +221,11 @@ const ElectionDetailPage = () => {
           {!votes.isLoading && (votes.data?.votes ?? []).length === 0 && (
             <EmptyState title='No votes yet' hint='Votes will appear here as they are cast.' />
           )}
-          <PaginationControls page={page} totalPages={votes.data?.pagination?.totalPages} onChange={setPage} />
+          <PaginationControls
+            page={page}
+            totalPages={votes.data?.pagination?.totalPages}
+            onChange={(next) => setState({ votesPage: String(next) })}
+          />
         </Tabs.Content>
 
         <Tabs.Content value='operations' p={0}>
@@ -235,7 +243,11 @@ const ElectionDetailPage = () => {
               />
             </SimpleGrid>
 
-            <ElectionCostPanel electionId={electionId} page={feesPage} onPageChange={setFeesPage} />
+            <ElectionCostPanel
+              electionId={electionId}
+              page={feesPage}
+              onPageChange={(next) => setState({ feesPage: String(next) })}
+            />
 
             <LifecycleTimeline
               electionId={electionId}

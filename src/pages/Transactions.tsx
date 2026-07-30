@@ -1,5 +1,5 @@
 import { Grid, Input, NativeSelect, Stack, Table, Tag } from '@chakra-ui/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GoToInput } from '~components/chain/GoToInput'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
@@ -7,14 +7,30 @@ import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
+import { useUrlListState } from '~hooks/useUrlListState'
 import { useTransactions } from '~hooks/useVoconeApi'
 import { TX_TYPE_OPTIONS, transactionTypeLabel, transactionTypePalette } from '~utils/txLabels'
 
+const DEFAULTS = { page: '0', height: '', type: '', signer: '' }
+
 const TransactionsPage = () => {
-  const [page, setPage] = useState(0)
-  const [height, setHeight] = useState('')
-  const [type, setType] = useState('')
-  const [signer, setSigner] = useState('')
+  const { state, setState, num } = useUrlListState(DEFAULTS)
+  const page = num('page')
+  const { height, type, signer } = state
+
+  // Local drafts for the two text filters, pushed to the URL once typing settles.
+  const [drafts, setDrafts] = useState({ height, signer })
+  useEffect(() => {
+    setDrafts({ height, signer })
+  }, [height, signer])
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (drafts.height === height && drafts.signer === signer) return
+      setState({ ...drafts, page: DEFAULTS.page })
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [drafts, height, signer, setState])
+
   const txs = useTransactions(page, 25, height || undefined, type || undefined, signer || undefined)
   const rows = txs.data?.transactions ?? []
 
@@ -35,19 +51,13 @@ const TransactionsPage = () => {
       <Stack direction={{ base: 'column', md: 'row' }} gap={3}>
         <Input
           placeholder='Block height'
-          value={height}
-          onChange={(e) => {
-            setHeight(e.target.value)
-            setPage(0)
-          }}
+          value={drafts.height}
+          onChange={(e) => setDrafts({ ...drafts, height: e.target.value })}
         />
         <NativeSelect.Root>
           <NativeSelect.Field
             value={type}
-            onChange={(e) => {
-              setType(e.target.value)
-              setPage(0)
-            }}
+            onChange={(e) => setState({ type: e.target.value, page: DEFAULTS.page })}
           >
             <option value=''>All types</option>
             {TX_TYPE_OPTIONS.map(({ value, label }) => (
@@ -60,11 +70,8 @@ const TransactionsPage = () => {
         </NativeSelect.Root>
         <Input
           placeholder='Signer address'
-          value={signer}
-          onChange={(e) => {
-            setSigner(e.target.value)
-            setPage(0)
-          }}
+          value={drafts.signer}
+          onChange={(e) => setDrafts({ ...drafts, signer: e.target.value })}
         />
       </Stack>
       <PageSection title='Transaction list'>
@@ -107,7 +114,11 @@ const TransactionsPage = () => {
           <EmptyState title='No transactions found' hint='Nothing matches these filters.' />
         )}
       </PageSection>
-      <PaginationControls page={page} totalPages={txs.data?.pagination?.totalPages} onChange={setPage} />
+      <PaginationControls
+        page={page}
+        totalPages={txs.data?.pagination?.totalPages}
+        onChange={(next) => setState({ page: String(next) })}
+      />
     </Grid>
   )
 }

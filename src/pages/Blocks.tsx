@@ -1,5 +1,5 @@
 import { Button, Grid, Input, NativeSelect, Stack, Table } from '@chakra-ui/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { GoToInput } from '~components/chain/GoToInput'
 import { EmptyState } from '~components/shared/EmptyState'
@@ -10,14 +10,31 @@ import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { TechnicalDetails } from '~components/shared/TechnicalDetails'
+import { useUrlListState } from '~hooks/useUrlListState'
 import { useBlocks, useValidators } from '~hooks/useVoconeApi'
 
+const DEFAULTS = { page: '0', chainId: '', hash: '', proposer: '', txs: 'all' }
+
 const BlocksPage = () => {
-  const [page, setPage] = useState(0)
-  const [chainId, setChainId] = useState('')
-  const [hashFilter, setHashFilter] = useState('')
-  const [proposer, setProposer] = useState('')
-  const [onlyWithTxs, setOnlyWithTxs] = useState<'all' | 'withTx'>('all')
+  const { state, setState, num } = useUrlListState(DEFAULTS)
+  const page = num('page')
+  const { chainId, hash: hashFilter, proposer } = state
+  const onlyWithTxs = state.txs === 'withTx' ? 'withTx' : 'all'
+
+  // The three text filters type into local drafts so keystrokes stay snappy;
+  // the settled value is what reaches the URL (and the query).
+  const [drafts, setDrafts] = useState({ chainId, hash: hashFilter, proposer })
+  useEffect(() => {
+    setDrafts({ chainId, hash: hashFilter, proposer })
+  }, [chainId, hashFilter, proposer])
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (drafts.chainId === chainId && drafts.hash === hashFilter && drafts.proposer === proposer) return
+      setState({ ...drafts, page: DEFAULTS.page })
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [drafts, chainId, hashFilter, proposer, setState])
+
   const blocks = useBlocks(page, 25, chainId || undefined, hashFilter || undefined, proposer || undefined)
   const validators = useValidators()
   // The block list only carries proposer addresses; the validator list is the
@@ -42,37 +59,25 @@ const BlocksPage = () => {
       <Stack direction={{ base: 'column', md: 'row' }} gap={3}>
         <Input
           placeholder='Block hash (partial)'
-          value={hashFilter}
-          onChange={(e) => {
-            setHashFilter(e.target.value)
-            setPage(0)
-          }}
+          value={drafts.hash}
+          onChange={(e) => setDrafts({ ...drafts, hash: e.target.value })}
         />
         <Input
           placeholder='Proposer address'
-          value={proposer}
-          onChange={(e) => {
-            setProposer(e.target.value)
-            setPage(0)
-          }}
+          value={drafts.proposer}
+          onChange={(e) => setDrafts({ ...drafts, proposer: e.target.value })}
         />
         <NativeSelect.Root maxW={{ md: '200px' }}>
-          <NativeSelect.Field value={onlyWithTxs} onChange={(e) => setOnlyWithTxs(e.target.value as 'all' | 'withTx')}>
+          <NativeSelect.Field
+            value={onlyWithTxs}
+            onChange={(e) => setState({ txs: e.target.value, page: DEFAULTS.page })}
+          >
             <option value='all'>All blocks</option>
             <option value='withTx'>At least 1 transaction</option>
           </NativeSelect.Field>
           <NativeSelect.Indicator />
         </NativeSelect.Root>
-        <Button
-          variant='outline'
-          onClick={() => {
-            setChainId('')
-            setHashFilter('')
-            setProposer('')
-            setOnlyWithTxs('all')
-            setPage(0)
-          }}
-        >
+        <Button variant='outline' onClick={() => setState({ ...DEFAULTS })}>
           Reset
         </Button>
       </Stack>
@@ -80,11 +85,8 @@ const BlocksPage = () => {
       <TechnicalDetails title='Advanced filters'>
         <Input
           placeholder='Chain ID'
-          value={chainId}
-          onChange={(e) => {
-            setChainId(e.target.value)
-            setPage(0)
-          }}
+          value={drafts.chainId}
+          onChange={(e) => setDrafts({ ...drafts, chainId: e.target.value })}
         />
       </TechnicalDetails>
 
@@ -130,7 +132,11 @@ const BlocksPage = () => {
           <EmptyState title='No blocks found' hint='Nothing matches these filters.' />
         )}
       </PageSection>
-      <PaginationControls page={page} totalPages={blocks.data?.pagination?.totalPages} onChange={setPage} />
+      <PaginationControls
+        page={page}
+        totalPages={blocks.data?.pagination?.totalPages}
+        onChange={(next) => setState({ page: String(next) })}
+      />
     </Grid>
   )
 }

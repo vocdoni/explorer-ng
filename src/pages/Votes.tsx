@@ -1,19 +1,20 @@
 import { Grid, Input, Link, Table } from '@chakra-ui/react'
-import { useState } from 'react'
-import { Link as RouterLink, useSearchParams } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
+import { useUrlListState } from '~hooks/useUrlListState'
 import { useVotes } from '~hooks/useVoconeApi'
 
+const DEFAULTS = { page: '0', electionId: '' }
+
 const VotesPage = () => {
-  const [searchParams] = useSearchParams()
-  const initialElection = searchParams.get('electionId') ?? ''
-  const [page, setPage] = useState(0)
-  const [filter, setFilter] = useState(initialElection)
+  const { state, setState, num } = useUrlListState(DEFAULTS)
+  const page = num('page')
+  const filter = state.electionId
   const votes = useVotes(page, 25, filter || undefined)
   const rows = votes.data?.votes ?? []
 
@@ -26,10 +27,7 @@ const VotesPage = () => {
       <Input
         placeholder='Filter by election ID'
         value={filter}
-        onChange={(e) => {
-          setFilter(e.target.value)
-          setPage(0)
-        }}
+        onChange={(e) => setState({ electionId: e.target.value, page: DEFAULTS.page })}
       />
       <PageSection title='Vote list'>
         <Table.ScrollArea>
@@ -69,7 +67,11 @@ const VotesPage = () => {
           <EmptyState title='No votes found' hint='Nothing matches this filter yet.' />
         )}
       </PageSection>
-      <PaginationControls page={page} totalPages={votes.data?.pagination?.totalPages} onChange={setPage} />
+      <PaginationControls
+        page={page}
+        totalPages={votes.data?.pagination?.totalPages}
+        onChange={(next) => setState({ page: String(next) })}
+      />
     </Grid>
   )
 }

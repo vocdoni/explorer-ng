@@ -10,10 +10,13 @@ import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import type { OrgStats } from '~hooks/useOrgStats'
 import { ORG_SEARCH_DEPTH, useOrgNameSearch, useOrgStats } from '~hooks/useOrgStats'
+import { useUrlListState } from '~hooks/useUrlListState'
 import { useOrganizations } from '~hooks/useVoconeApi'
 import type { OrganizationSummary } from '~types/api'
 
 type SortKey = 'elections-desc' | 'elections-asc'
+
+const DEFAULTS = { page: '0', q: '', sort: 'elections-desc' }
 
 /** Right-aligned numeric cell: a skeleton while its row's stats are still
  * loading, '—' with a tooltip when the id fell outside the enrichment cap. */
@@ -72,16 +75,27 @@ const OrgListRow = ({ org, stats, statsLoading, enriched }: {
 const looksLikeId = (value: string) => /^(0x)?[0-9a-f]{4,}$/i.test(value.trim())
 
 const OrganizationsPage = () => {
-  const [page, setPage] = useState(0)
-  const [queryInput, setQueryInput] = useState('')
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState<SortKey>('elections-desc')
+  const { state, setState, num } = useUrlListState(DEFAULTS)
+  const page = num('page')
+  const query = state.q
+  const sort = (state.sort === 'elections-asc' ? 'elections-asc' : 'elections-desc') as SortKey
+  const [queryInput, setQueryInput] = useState(query)
 
-  // Typing a name fans out account lookups, so wait for the typist to pause.
+  // Re-seed the input when the URL moves under us (Back/Forward, Reset).
   useEffect(() => {
-    const timer = setTimeout(() => setQuery(queryInput.trim()), 400)
+    setQueryInput(query)
+  }, [query])
+
+  // Typing a name fans out account lookups, so wait for the typist to pause
+  // before it reaches the URL — and reset the page in the same write.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = queryInput.trim()
+      if (trimmed === query) return
+      setState({ q: trimmed, page: DEFAULTS.page })
+    }, 400)
     return () => clearTimeout(timer)
-  }, [queryInput])
+  }, [queryInput, query, setState])
 
   const idFilter = looksLikeId(query) ? query.replace(/^0x/i, '').toLowerCase() : ''
   const nameQuery = query && !idFilter ? query : ''
@@ -120,13 +134,13 @@ const OrganizationsPage = () => {
           placeholder='Search by name or organization ID'
           aria-label='Search organizations by name or ID'
           value={queryInput}
-          onChange={(e) => {
-            setQueryInput(e.target.value)
-            setPage(0)
-          }}
+          onChange={(e) => setQueryInput(e.target.value)}
         />
         <NativeSelect.Root>
-          <NativeSelect.Field value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+          <NativeSelect.Field
+            value={sort}
+            onChange={(e) => setState({ sort: e.target.value, page: DEFAULTS.page })}
+          >
             <option value='elections-desc'>Most elections</option>
             <option value='elections-asc'>Fewest elections</option>
           </NativeSelect.Field>
@@ -136,9 +150,7 @@ const OrganizationsPage = () => {
           variant='outline'
           onClick={() => {
             setQueryInput('')
-            setQuery('')
-            setSort('elections-desc')
-            setPage(0)
+            setState({ ...DEFAULTS })
           }}
         >
           Reset
@@ -197,7 +209,11 @@ const OrganizationsPage = () => {
       </PageSection>
 
       {!search.active && (
-        <PaginationControls page={page} totalPages={organizations.data?.pagination?.totalPages} onChange={setPage} />
+        <PaginationControls
+          page={page}
+          totalPages={organizations.data?.pagination?.totalPages}
+          onChange={(next) => setState({ page: String(next) })}
+        />
       )}
     </Grid>
   )

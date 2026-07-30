@@ -11,11 +11,15 @@ import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { StatTile } from '~components/shared/StatTile'
 import { TechnicalDetails, TechnicalField } from '~components/shared/TechnicalDetails'
+import { useUrlListState } from '~hooks/useUrlListState'
 import { useElectionTitles, useElections, useOrganizationMeta } from '~hooks/useVoconeApi'
 import { shortHex } from '~utils/format'
 
+const DEFAULTS = { tab: 'elections' }
+
 const OrganizationDetailPage = () => {
   const { organizationId = '' } = useParams()
+  const { state, setState } = useUrlListState(DEFAULTS)
   const org = useOrganizationMeta(organizationId)
   const elections = useElections(0, 12, undefined, organizationId)
   const rows = elections.data?.elections ?? []
@@ -54,7 +58,7 @@ const OrganizationDetailPage = () => {
         <StatTile label='Elections created' value={org.data?.electionIndex ?? rows.length ?? 0} />
       </Grid>
 
-      <Tabs.Root defaultValue='elections' lazyMount>
+      <Tabs.Root value={state.tab} onValueChange={(e) => setState({ tab: e.value })} lazyMount>
         <Tabs.List mb={6}>
           <Tabs.Trigger value='elections'>Elections</Tabs.Trigger>
           <Tabs.Trigger value='transfers'>Token transfers</Tabs.Trigger>

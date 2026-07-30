@@ -1,5 +1,5 @@
 import { Grid, Input, Link, SimpleGrid, Table, Tabs, Text } from '@chakra-ui/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { LuCoins, LuUsers } from 'react-icons/lu'
 import { EmptyState } from '~components/shared/EmptyState'
@@ -11,18 +11,36 @@ import { PaginationControls } from '~components/shared/PaginationControls'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { StatTile } from '~components/shared/StatTile'
 import { useAccountsList, useChainTransfers } from '~hooks/useAccounts'
+import { useUrlListState } from '~hooks/useUrlListState'
+
+const DEFAULTS = { tab: 'transfers', page: '0', account: '', holdersPage: '0' }
 
 /** Chain-wide token-transfers list. Backed by `GET /chain/transfers`, which
  *  already returns amount/from/to/height/txHash/timestamp per row, so no
  *  per-row enrichment call is needed. An optional account filter narrows the
  *  same query via the `accountId` param (transfers sent or received by it). */
 const TokenTransfersPage = () => {
-  const [page, setPage] = useState(0)
-  const [accountFilter, setAccountFilter] = useState('')
+  const { state, setState, num } = useUrlListState(DEFAULTS)
+  const page = num('page')
+  const holdersPage = num('holdersPage')
+  const accountFilter = state.account
+
+  // The address filter types locally and lands in the URL once typing settles.
+  const [accountInput, setAccountInput] = useState(accountFilter)
+  useEffect(() => {
+    setAccountInput(accountFilter)
+  }, [accountFilter])
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (accountInput === accountFilter) return
+      setState({ account: accountInput, page: DEFAULTS.page })
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [accountInput, accountFilter, setState])
+
   const transfers = useChainTransfers(page, accountFilter || undefined)
   const rows = transfers.data?.transfers ?? []
 
-  const [holdersPage, setHoldersPage] = useState(0)
   const holders = useAccountsList(holdersPage)
   const holderRows = holders.data?.accounts ?? []
   // Page 0 is already sorted by balance descending, so its first row is the
@@ -45,7 +63,7 @@ const TokenTransfersPage = () => {
         />
       </SimpleGrid>
 
-      <Tabs.Root defaultValue='transfers' lazyMount>
+      <Tabs.Root value={state.tab} onValueChange={(e) => setState({ tab: e.value })} lazyMount>
         <Tabs.List mb={4}>
           <Tabs.Trigger value='transfers'>Transfers</Tabs.Trigger>
           <Tabs.Trigger value='holders'>Token holders</Tabs.Trigger>
@@ -55,11 +73,8 @@ const TokenTransfersPage = () => {
           <Grid gap={4}>
             <Input
               placeholder='Filter by account address'
-              value={accountFilter}
-              onChange={(e) => {
-                setAccountFilter(e.target.value)
-                setPage(0)
-              }}
+              value={accountInput}
+              onChange={(e) => setAccountInput(e.target.value)}
             />
             <PageSection
               title='Transfer list'
@@ -112,7 +127,11 @@ const TokenTransfersPage = () => {
                 <EmptyState title='No token transfers found' hint='Nothing matches this filter yet.' />
               )}
             </PageSection>
-            <PaginationControls page={page} totalPages={transfers.data?.pagination?.totalPages} onChange={setPage} />
+            <PaginationControls
+              page={page}
+              totalPages={transfers.data?.pagination?.totalPages}
+              onChange={(next) => setState({ page: String(next) })}
+            />
           </Grid>
         </Tabs.Content>
 
@@ -155,7 +174,7 @@ const TokenTransfersPage = () => {
             <PaginationControls
               page={holdersPage}
               totalPages={holders.data?.pagination?.totalPages}
-              onChange={setHoldersPage}
+              onChange={(next) => setState({ holdersPage: String(next) })}
             />
           </Grid>
         </Tabs.Content>
