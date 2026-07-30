@@ -34,9 +34,9 @@ import {
 } from '~hooks/useChainStats'
 import {
   useChainInfo,
-  useElectionTitles,
   useElections,
   useOrganizations,
+  useResolvedElectionTitles,
   useTransactions,
   useValidators,
   useVotes,
@@ -56,28 +56,33 @@ const SeeAll = ({ to, children }: { to: string; children: React.ReactNode }) => 
  *  this height, so a 3-column grid of mixed-content panels still lines up. */
 const ROWS = 5
 const PANEL_MIN_H = '360px'
+// Panels that are not the "is the chain alive" pulse (donuts feed off
+// /chain/stats or a 5-minute-cached breakdown already; recent elections,
+// transactions, validators and transfers change slowly enough that a minute
+// of staleness is invisible) relax to this instead of the shared 15s floor.
+const IDLE_POLL_MS = 60000
 
 const DashboardPage = () => {
   const chain = useChainInfo()
-  const elections = useElections(0, ROWS)
+  const elections = useElections(0, ROWS, undefined, undefined, undefined, IDLE_POLL_MS)
   const votes = useVotes(0, ROWS)
-  const txs = useTransactions(0, ROWS)
-  const validators = useValidators()
-  const organizations = useOrganizations(0, 8)
+  const txs = useTransactions(0, ROWS, undefined, undefined, undefined, IDLE_POLL_MS)
+  const validators = useValidators(IDLE_POLL_MS)
+  const organizations = useOrganizations(0, 8, undefined, undefined, IDLE_POLL_MS)
   const accountCount = useAccountCount()
 
   // One 40-block request feeds the block-time chart and the blocks feed.
   const activity = useBlockActivity(40)
   const txTypes = useTxTypeBreakdown()
   const electionStatus = useElectionStatusBreakdown()
-  const transfers = useLatestTransfers(ROWS)
+  const transfers = useLatestTransfers(ROWS, IDLE_POLL_MS)
 
   const topOrganizations = [...(organizations.data?.organizations ?? [])]
     .sort((a, b) => b.electionCount - a.electionCount)
     .slice(0, ROWS)
 
   const electionRows = elections.data?.elections ?? []
-  const { titles } = useElectionTitles(electionRows.map((e) => e.electionId))
+  const { titles } = useResolvedElectionTitles(electionRows)
 
   const syncing = chain.data?.syncing ?? false
   // chain/info returns rolling block-time averages in ms (1m, 10m, 1h, 6h, 24h);
@@ -255,7 +260,7 @@ const DashboardPage = () => {
                       </Table.Cell>
                       <Table.Cell textAlign='end'>{(v.blockHeight ?? 0).toLocaleString()}</Table.Cell>
                       <Table.Cell textAlign='end'>
-                        <RelativeTime value={v.date} mode='relative' fontSize='sm' />
+                        <RelativeTime value={v.blockTime ?? v.date} mode='relative' fontSize='sm' />
                       </Table.Cell>
                     </Table.Row>
                   ))}

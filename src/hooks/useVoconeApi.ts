@@ -1,4 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useApi } from '~contexts/ApiContext'
 import type {
   Block,
@@ -7,6 +8,7 @@ import type {
   CountResult,
   Election,
   ElectionMetadata,
+  ElectionSummary,
   LocalizedText,
   ElectionsList,
   OrganizationAccount,
@@ -22,12 +24,35 @@ import { ApiError, fetchJson } from '~utils/http'
 
 const q = (base: string, path: string) => `${base}${path}`
 
-export const useChainInfo = () => {
-  const { apiUrl, refreshMs } = useApi()
-  return useQuery({ queryKey: ['chain-info', apiUrl], queryFn: () => fetchJson<ChainInfo>(q(apiUrl, '/chain/info')), refetchInterval: refreshMs })
+/** `poll: false` stops the shared 15s refresh — used by pages showing an
+ *  already-settled, immutable fact (e.g. `useVerification` once a vote is
+ *  confirmed) where re-polling only adds load for no new information. */
+interface PollOption {
+  poll?: boolean
 }
 
-export const useElections = (page: number, limit: number, status?: string, organizationId?: string, electionId?: string) => {
+export const useChainInfo = (options?: PollOption) => {
+  const { apiUrl, refreshMs } = useApi()
+  const poll = options?.poll ?? true
+  return useQuery({
+    queryKey: ['chain-info', apiUrl],
+    queryFn: () => fetchJson<ChainInfo>(q(apiUrl, '/chain/info')),
+    refetchInterval: poll ? refreshMs : false,
+  })
+}
+
+/** `pollMs` lets a caller override the shared 15s refresh with a slower
+ *  interval (e.g. the Dashboard's "recent elections" panel, which does not
+ *  need list-page freshness) without changing the default for every other
+ *  caller of this hook. */
+export const useElections = (
+  page: number,
+  limit: number,
+  status?: string,
+  organizationId?: string,
+  electionId?: string,
+  pollMs?: number
+) => {
   const { apiUrl, refreshMs } = useApi()
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (status) params.set('status', status)
@@ -36,17 +61,18 @@ export const useElections = (page: number, limit: number, status?: string, organ
   return useQuery({
     queryKey: ['elections', apiUrl, page, limit, status, organizationId, electionId],
     queryFn: () => fetchJson<ElectionsList>(q(apiUrl, `/elections?${params.toString()}`)),
-    refetchInterval: refreshMs,
+    refetchInterval: pollMs ?? refreshMs,
   })
 }
 
-export const useElection = (electionId: string) => {
+export const useElection = (electionId: string, options?: PollOption) => {
   const { apiUrl, refreshMs } = useApi()
+  const poll = options?.poll ?? true
   return useQuery({
     queryKey: ['election', apiUrl, electionId],
     queryFn: () => fetchJson<Election>(q(apiUrl, `/elections/${electionId}`)),
     enabled: !!electionId,
-    refetchInterval: refreshMs,
+    refetchInterval: poll ? refreshMs : false,
   })
 }
 
@@ -124,12 +150,36 @@ export const useElectionTitles = (ids: string[]) => {
   })
 }
 
-export const useElectionVotes = (electionId: string, page: number, limit: number) => {
+/**
+ * Title resolution for a page of election rows, feature-detecting the
+ * per-row `title` field a new-enough gateway inlines directly into
+ * `GET /elections`. Rows that already carry a title never touch
+ * {@link useElectionTitles} — only the ids still missing one are fanned out —
+ * so a gateway that inlines titles on every row costs zero extra requests
+ * here instead of the usual per-page fan-out.
+ */
+export const useResolvedElectionTitles = (elections: ElectionSummary[]) => {
+  const missingIds = useMemo(
+    () => elections.filter((e) => e.title === undefined).map((e) => e.electionId),
+    [elections]
+  )
+  const { titles: fetched, isLoading } = useElectionTitles(missingIds)
+  const titles = useMemo(() => {
+    const merged: Record<string, string | undefined> = { ...fetched }
+    elections.forEach((e) => {
+      if (e.title !== undefined) merged[e.electionId] = e.title
+    })
+    return merged
+  }, [elections, fetched])
+  return { titles, isLoading }
+}
+
+export const useElectionVotes = (electionId: string, page: number, limit: number, enabled = true) => {
   const { apiUrl, refreshMs } = useApi()
   return useQuery({
     queryKey: ['election-votes', apiUrl, electionId, page, limit],
     queryFn: () => fetchJson<VotesList>(q(apiUrl, `/votes?page=${page}&limit=${limit}&electionId=${electionId}`)),
-    enabled: !!electionId,
+    enabled: !!electionId && enabled,
     refetchInterval: refreshMs,
   })
 }
@@ -209,13 +259,14 @@ export const useBlocks = (page: number, limit: number, chainId?: string, hash?: 
   })
 }
 
-export const useBlock = (height: string) => {
+export const useBlock = (height: string, options?: PollOption) => {
   const { apiUrl, refreshMs } = useApi()
+  const poll = options?.poll ?? true
   return useQuery({
     queryKey: ['block', apiUrl, height],
     queryFn: () => fetchJson<Block>(q(apiUrl, `/chain/blocks/${height}`)),
     enabled: !!height,
-    refetchInterval: refreshMs,
+    refetchInterval: poll ? refreshMs : false,
   })
 }
 
@@ -240,14 +291,28 @@ export const useDateToBlock = (timestamp?: string | number) => {
   })
 }
 
-export const useOrganizations = (page: number, limit: number, organizationId?: string) => {
+/**
+ * `name` filters server-side on gateways new enough to support it
+ * (`useGatewayCapabilities`). Sending it to an older gateway is safe — an
+ * unrecognized query param is simply ignored — but callers should only pass
+ * it once the gateway is known-new, since an ignored filter silently returns
+ * unfiltered results rather than an error.
+ */
+export const useOrganizations = (
+  page: number,
+  limit: number,
+  organizationId?: string,
+  name?: string,
+  pollMs?: number
+) => {
   const { apiUrl, refreshMs } = useApi()
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (organizationId) params.set('organizationId', organizationId)
+  if (name) params.set('name', name)
   return useQuery({
-    queryKey: ['organizations', apiUrl, page, limit, organizationId],
+    queryKey: ['organizations', apiUrl, page, limit, organizationId, name],
     queryFn: () => fetchJson<OrganizationsList>(q(apiUrl, `/chain/organizations?${params.toString()}`)),
-    refetchInterval: refreshMs,
+    refetchInterval: pollMs ?? refreshMs,
   })
 }
 
@@ -261,7 +326,14 @@ export const useOrganization = (organizationId: string) => {
   })
 }
 
-export const useTransactions = (page: number, limit: number, height?: string, type?: string, signer?: string) => {
+export const useTransactions = (
+  page: number,
+  limit: number,
+  height?: string,
+  type?: string,
+  signer?: string,
+  pollMs?: number
+) => {
   const { apiUrl, refreshMs } = useApi()
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (height) params.set('height', height)
@@ -270,7 +342,7 @@ export const useTransactions = (page: number, limit: number, height?: string, ty
   return useQuery({
     queryKey: ['transactions', apiUrl, page, limit, height, type, signer],
     queryFn: () => fetchJson<TransactionsList>(q(apiUrl, `/chain/transactions?${params.toString()}`)),
-    refetchInterval: refreshMs,
+    refetchInterval: pollMs ?? refreshMs,
   })
 }
 
@@ -294,9 +366,13 @@ export const useTransactionRef = (hash: string) => {
   })
 }
 
-export const useValidators = () => {
+export const useValidators = (pollMs?: number) => {
   const { apiUrl, refreshMs } = useApi()
-  return useQuery({ queryKey: ['validators', apiUrl], queryFn: () => fetchJson<ValidatorList>(q(apiUrl, '/chain/validators')), refetchInterval: refreshMs })
+  return useQuery({
+    queryKey: ['validators', apiUrl],
+    queryFn: () => fetchJson<ValidatorList>(q(apiUrl, '/chain/validators')),
+    refetchInterval: pollMs ?? refreshMs,
+  })
 }
 
 export const useTransactionCount = () => {

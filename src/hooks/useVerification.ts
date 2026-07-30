@@ -49,18 +49,21 @@ export const useVerification = (electionIdInput?: string, voteIdInput?: string) 
   const electionId = givenElectionId || normalizeId(vote.data?.electionID)
 
   const verify = useVoteVerify(electionId, voteId)
-  const election = useElection(electionId)
   const blockHeight = vote.data?.blockHeight
-  const block = useBlock(blockHeight !== undefined ? String(blockHeight) : '')
-  const chain = useChainInfo()
+
+  // "Complete" means the artifact is worth generating: the chain confirmed the
+  // vote and we know where it lives. Block and election lookups are enrichment.
+  // Computed before the enrichment queries below so it can gate their polling
+  // without depending on the very queries it gates.
+  const complete = verify.isSuccess && vote.isSuccess && blockHeight !== undefined
+
+  const election = useElection(electionId, { poll: !complete })
+  const block = useBlock(blockHeight !== undefined ? String(blockHeight) : '', { poll: !complete })
+  const chain = useChainInfo({ poll: !complete })
 
   const electionMeta = electionMetaFrom(election.data?.metadata)
   const overwriteCount = vote.data?.overwriteCount ?? 0
   const maxVoteOverwrites = Number((election.data?.tallyMode as Record<string, unknown>)?.maxVoteOverwrites ?? 0)
-
-  // "Complete" means the artifact is worth generating: the chain confirmed the
-  // vote and we know where it lives. Block and election lookups are enrichment.
-  const complete = verify.isSuccess && vote.isSuccess && blockHeight !== undefined
 
   return {
     apiUrl,

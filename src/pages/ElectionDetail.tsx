@@ -56,8 +56,20 @@ const ElectionDetailPage = () => {
   const page = num('votesPage')
   const feesPage = num('feesPage')
   const election = useElection(electionId)
-  const votes = useElectionVotes(electionId, page, 20)
+  // A single 300-row sample backs both the analytics timeline and the votes
+  // tab for its first 15 pages (300 / 20) — one request instead of two
+  // overlapping ones. Only pages beyond that fall back to a small dedicated
+  // fetch, which is the rare case (elections with 300+ votes, viewer paging
+  // deep into them).
   const voteAnalytics = useElectionVotes(electionId, 0, 300)
+  const needsDeepVotesPage = (page + 1) * 20 > 300
+  const deepVotes = useElectionVotes(electionId, page, 20, needsDeepVotesPage)
+  const votesRows = needsDeepVotesPage
+    ? (deepVotes.data?.votes ?? [])
+    : (voteAnalytics.data?.votes ?? []).slice(page * 20, page * 20 + 20)
+  const votesLoading = needsDeepVotesPage ? deepVotes.isLoading : voteAnalytics.isLoading
+  const votesTotalPages =
+    election.data?.voteCount !== undefined ? Math.max(1, Math.ceil(election.data.voteCount / 20)) : undefined
   const keys = useElectionKeys(electionId)
   const scrutiny = useElectionScrutiny(electionId)
   const createdBlock = useDateToBlock(election.data?.creationTime)
@@ -201,7 +213,7 @@ const ElectionDetailPage = () => {
                 </Table.Row>
               </Table.Header>
               <Table.Body>
-                {(votes.data?.votes ?? []).map((v) => (
+                {votesRows.map((v) => (
                   <Table.Row key={v.voteID}>
                     <Table.Cell>
                       <HashDisplay value={v.voteID} copyLabel='Vote ID' to={`/votes/${v.voteID}`} />
@@ -211,19 +223,19 @@ const ElectionDetailPage = () => {
                     </Table.Cell>
                     <Table.Cell textAlign='end'>{v.blockHeight ?? 0}</Table.Cell>
                     <Table.Cell textAlign='end'>
-                      <RelativeTime value={v.date} mode='relative' fontSize='sm' />
+                      <RelativeTime value={v.blockTime ?? v.date} mode='relative' fontSize='sm' />
                     </Table.Cell>
                   </Table.Row>
                 ))}
               </Table.Body>
             </Table.Root>
           </Table.ScrollArea>
-          {!votes.isLoading && (votes.data?.votes ?? []).length === 0 && (
+          {!votesLoading && votesRows.length === 0 && (
             <EmptyState title='No votes yet' hint='Votes will appear here as they are cast.' />
           )}
           <PaginationControls
             page={page}
-            totalPages={votes.data?.pagination?.totalPages}
+            totalPages={votesTotalPages}
             onChange={(next) => setState({ votesPage: String(next) })}
           />
         </Tabs.Content>
