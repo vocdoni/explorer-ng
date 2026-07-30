@@ -39,17 +39,18 @@ React 18, TypeScript, Vite 5, Chakra UI v3, TanStack Query, React Router (hash r
 
 ## Quickstart
 
-Requires Node.js 20 or newer.
+Requires Node.js 20 or newer and [pnpm](https://pnpm.io) 11 (`corepack enable` picks up the
+version pinned in `package.json`).
 
 ```bash
-npm ci
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 The dev server listens on <http://localhost:3000>. With no configuration it reads from the public
 gateway at `https://api.vocdoni.io/v2`; see below to point it elsewhere.
 
-`npm ci` runs a `postinstall` step (`chakra typegen`) that generates the Chakra UI type map. That
+`pnpm install` runs a `postinstall` step (`chakra typegen`) that generates the Chakra UI type map. That
 output is not committed, so the install step is required before type-checking or building.
 
 ## Configuration
@@ -112,8 +113,8 @@ plain-text `ok`.
 The build output is a plain static bundle with no server-side requirements:
 
 ```bash
-npm ci
-npm run build          # writes dist/
+pnpm install --frozen-lockfile
+pnpm build             # writes dist/
 ```
 
 Serve `dist/` from nginx, Caddy, S3/CloudFront, GitHub Pages, or any static host. The application
@@ -138,10 +139,10 @@ read-only; the explorer never submits transactions and holds no keys.
 ## Development
 
 ```bash
-npm run dev        # dev server on :3000
-npm run build      # chakra typegen + vite build -> dist/
-npm run preview    # serve the production build on :4173
-npm run lint       # tsc --noEmit + eslint, zero warnings tolerated
+pnpm dev           # dev server on :3000
+pnpm build         # chakra typegen + vite build -> dist/
+pnpm preview       # serve the production build on :4173
+pnpm lint          # tsc --noEmit + eslint, zero warnings tolerated
 ```
 
 Equivalent `make` targets exist: `install`, `dev`, `build`, `lint`, `preview`, `docker-build`,

@@ -3,19 +3,19 @@ SHELL := /bin/bash
 .PHONY: install dev build lint preview docker-build docker-up docker-down docker-logs
 
 install:
-	npm ci
+	pnpm install --frozen-lockfile
 
 dev:
-	npm run dev
+	pnpm dev
 
 build:
-	npm run build
+	pnpm build
 
 lint:
-	npm run lint
+	pnpm lint
 
 preview:
-	npm run preview
+	pnpm preview
 
 docker-build:
 	docker compose build
