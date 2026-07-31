@@ -2,7 +2,7 @@ import { Box, Button, Clipboard, Flex, Icon, Text } from '@chakra-ui/react'
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
 import { useRef, useState } from 'react'
 import { LuDownload, LuTriangleAlert } from 'react-icons/lu'
-import type { Verification } from '~hooks/useVerification'
+import { verificationUrl, type Verification } from '~hooks/useVerification'
 import { parseApiDate, shortHex } from '~utils/format'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -37,9 +37,10 @@ export const ProofActions = ({ verification }: { verification: Verification }) =
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
 
-  // The short form keeps the printed URL (and the QR that encodes it) to one
-  // identifier; the two-segment permalink in older proofs still resolves.
-  const shareUrl = `${window.location.origin}${window.location.pathname}#/verify/${voteId}`
+  // One identifier, and it sits after the `#`. A printed proof outlives the
+  // browser tab it came from: whoever scans this QR next should not announce the
+  // nullifier to every hop between them and the explorer.
+  const shareUrl = verificationUrl(voteId)
   const verifyEndpoint = `${apiUrl}/votes/verify/${electionId}/${voteId}`
 
   const download = async () => {

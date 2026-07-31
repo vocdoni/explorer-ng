@@ -29,7 +29,7 @@ const TransactionDetailPage = () => {
           <Text fontSize='sm'>
             Signed by <HashDisplay value={info.signer} copyLabel='Signer address' /> and included in{' '}
             <Link asChild variant='plain'>
-              <RouterLink to={`/blocks/${info.height}`}>block {info.height.toLocaleString()}</RouterLink>
+              <RouterLink to={`/block/${info.height}`}>block {info.height.toLocaleString()}</RouterLink>
             </Link>
             , <RelativeTime value={block.data?.header.time} mode='relative' />.
           </Text>
@@ -41,7 +41,7 @@ const TransactionDetailPage = () => {
         <DetailRow label='Subtype'>{info?.subtype || '—'}</DetailRow>
         <DetailRow label='Block height'>
           <Link asChild variant='plain'>
-            <RouterLink to={`/blocks/${info?.height ?? ''}`}>{info?.height ?? 0}</RouterLink>
+            <RouterLink to={`/block/${info?.height ?? ''}`}>{info?.height ?? 0}</RouterLink>
           </Link>
         </DetailRow>
         <DetailRow label='Position in block'>{info?.index ?? 0}</DetailRow>

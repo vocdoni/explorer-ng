@@ -48,7 +48,7 @@ export const TransfersTable = ({ address }: Props) => {
                     </Tag.Root>
                   </Table.Cell>
                   <Table.Cell>
-                    <HashDisplay value={counterpart} copyLabel='Account address' to={`/accounts/${counterpart}`} />
+                    <HashDisplay value={counterpart} copyLabel='Account address' to={`/account/${counterpart}`} />
                   </Table.Cell>
                   <Table.Cell textAlign='end'>{t.amount.toLocaleString()}</Table.Cell>
                   <Table.Cell>

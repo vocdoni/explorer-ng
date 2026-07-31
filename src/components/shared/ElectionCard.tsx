@@ -17,7 +17,7 @@ export const ElectionCard = ({ election, title }: Props) => (
     <Card.Body gap={4}>
       <Flex justify='space-between' align='flex-start' gap={3} wrap='wrap'>
         <Link asChild variant='unstyled' minW={0} flex='1'>
-          <RouterLink to={`/elections/${election.electionId}`}>
+          <RouterLink to={`/process/${election.electionId}`}>
             <Heading size='md' lineHeight={1.3} wordBreak='break-word'>
               {title || shortHex(election.electionId, 12, 8)}
             </Heading>

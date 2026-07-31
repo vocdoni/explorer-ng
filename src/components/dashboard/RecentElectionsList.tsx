@@ -47,7 +47,7 @@ export const RecentElectionsList = ({ elections, titles, isLoading }: Props) => 
                 <Table.Cell maxW='320px' overflow='hidden'>
                   {title ? (
                     <Link asChild variant='plain' display='block' minW={0} overflow='hidden'>
-                      <RouterLink to={`/elections/${e.electionId}`}>
+                      <RouterLink to={`/process/${e.electionId}`}>
                         <Text truncate fontSize='sm' title={title}>
                           {title}
                         </Text>
@@ -57,7 +57,7 @@ export const RecentElectionsList = ({ elections, titles, isLoading }: Props) => 
                     <HashDisplay
                       value={e.electionId}
                       copyLabel='Election ID'
-                      to={`/elections/${e.electionId}`}
+                      to={`/process/${e.electionId}`}
                     />
                   )}
                 </Table.Cell>

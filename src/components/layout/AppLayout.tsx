@@ -1,26 +1,35 @@
 import { Box, Button, Flex, IconButton, Image, Link, Menu, Portal, Text } from '@chakra-ui/react'
 import { useState } from 'react'
 import { LuChevronDown, LuMenu } from 'react-icons/lu'
-import { NavLink, Outlet, Link as RouterLink } from 'react-router-dom'
+import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom'
 import { GlobalSearch } from '~components/shared/GlobalSearch'
 import { SettingsPopover } from '~components/shared/SettingsPopover'
 import { ColorModeToggle } from '~components/ui/ColorModeToggle'
 
+interface NavEntry {
+  to: string
+  label: string
+  /** Match `to` exactly — for `/`, which every other path starts with. */
+  end?: boolean
+  /** Sibling path whose pages belong to this section. See `NavItem`. */
+  detail?: string
+}
+
 /** Citizen-facing sections stay in the bar; auditor/developer views collapse
  *  into the "More" menu so the header reads as a product, not a data dump. */
-const primaryLinks = [
+const primaryLinks: NavEntry[] = [
   { to: '/', label: 'Dashboard', end: true },
-  { to: '/organizations', label: 'Organizations' },
-  { to: '/elections', label: 'Elections' },
+  { to: '/accounts', label: 'Organizations', detail: '/account' },
+  { to: '/processes', label: 'Elections', detail: '/process' },
   { to: '/verify', label: 'Verify vote' },
 ]
 
-const moreLinks = [
-  { to: '/votes', label: 'Votes' },
-  { to: '/blocks', label: 'Blocks' },
+const moreLinks: NavEntry[] = [
+  { to: '/envelopes', label: 'Votes', detail: '/envelope' },
+  { to: '/blocks', label: 'Blocks', detail: '/block' },
   { to: '/transactions', label: 'Transactions' },
   { to: '/tokens', label: 'Tokens' },
-  { to: '/validators', label: 'Validators' },
+  { to: '/validators', label: 'Validators', detail: '/validator' },
   { to: '/monitoring', label: 'Monitoring' },
 ]
 
@@ -28,13 +37,25 @@ const moreLinks = [
  *  them rather than shipping a second asset that can drift from the first. */
 const invertOnDark = { _dark: { filter: 'invert(1)' } }
 
-const NavItem = ({ to, label, end }: { to: string; label: string; end?: boolean }) => (
-  <Button asChild variant='navbar' size='sm'>
-    <NavLink to={to} end={end}>
-      {label}
-    </NavLink>
-  </Button>
-)
+/**
+ * `NavLink` alone cannot highlight these, because a detail page does not live
+ * under its list: the paths are the ones `vocdoni/explorer` published, and there
+ * a list was plural and its detail pages singular — `/accounts` next to
+ * `/account/{address}`. `detail` names that sibling.
+ */
+const NavItem = ({ to, label, end, detail }: NavEntry) => {
+  const { pathname } = useLocation()
+  const under = (base: string) => pathname === base || pathname.startsWith(`${base}/`)
+  const active = end ? pathname === to : under(to) || (!!detail && under(detail))
+
+  return (
+    <Button asChild variant='navbar' size='sm'>
+      <RouterLink to={to} aria-current={active ? 'page' : undefined}>
+        {label}
+      </RouterLink>
+    </Button>
+  )
+}
 
 /** The official explorer.vote lockup: Vocdoni mark plus the word EXPLORER, so
  *  no text label is set beside it. */

@@ -1,0 +1,11 @@
+# Path routing, so every route is a real URL the server is asked for. Netlify
+# has no SPA fallback of its own; without this, /process/<id> is a 404 on a cold
+# load and only works once the app is already running.
+#
+# 200 rather than 301: the browser must keep the URL it asked for so the router
+# can read it. A genuine unknown path is answered by the app's own 404 page.
+#
+# Legacy URLs are not listed here — they are rewritten client-side in
+# src/utils/legacyUrl.ts, which keeps one copy of the mapping and works for the
+# Docker/nginx deployment too (docker/nginx/default.conf already has try_files).
+/*  /index.html  200

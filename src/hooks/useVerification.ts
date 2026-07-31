@@ -1,14 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '~contexts/ApiContext'
 import { electionMetaFrom, useBlock, useChainInfo, useElection, useVote } from '~hooks/useVoconeApi'
+import { normalizeId } from '~utils/format'
 import { fetchJson } from '~utils/http'
-
-/**
- * Identifiers arrive from QR scans, receipt e-mails and hand typing, so they
- * turn up with `0x` prefixes, stray whitespace and mixed case. The API only
- * accepts bare lowercase hex.
- */
-export const normalizeId = (raw?: string) => (raw ?? '').trim().replace(/^0x/i, '').toLowerCase()
 
 /**
  * The chain's own answer to "is this vote registered?": a bare 200 with an
@@ -85,6 +79,13 @@ export const useVerification = (electionIdInput?: string, voteIdInput?: string) 
 
 export type Verification = ReturnType<typeof useVerification>
 
-/** The canonical, shareable permalink for a verification (hash router). */
-export const verificationUrl = (electionId: string, voteId: string) =>
-  `${window.location.origin}${window.location.pathname}#/verify/${electionId}/${voteId}`
+/**
+ * The canonical, shareable permalink for a verification.
+ *
+ * The vote ID sits after the `#` deliberately: it is a nullifier, and the
+ * fragment is the only part of a URL that never leaves the browser. This is the
+ * link printed into proof PDFs and encoded into their QR codes, so it is also
+ * the one that decides whether a voter scanning their receipt announces that
+ * nullifier to every hop in between.
+ */
+export const verificationUrl = (voteId: string) => `${window.location.origin}/verify#${voteId}`

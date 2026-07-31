@@ -42,7 +42,7 @@ const OrgListRow = ({ org, stats, statsLoading, enriched }: {
     <Table.Row>
       <Table.Cell minW='0'>
         <Link asChild variant='unstyled'>
-          <RouterLink to={`/organizations/${org.organizationID}`}>
+          <RouterLink to={`/account/${org.organizationID}`}>
             <HStack gap={3}>
               <AddressAvatar address={org.organizationID} avatarUrl={stats?.avatar} size='32px' />
               {stats?.name ? (
@@ -64,7 +64,7 @@ const OrgListRow = ({ org, stats, statsLoading, enriched }: {
       <StatCell value={stats?.feesCount !== undefined ? stats.feesCount.toLocaleString() : undefined} loaded={loaded} />
       <Table.Cell>
         <Button asChild variant='link' size='sm'>
-          <RouterLink to={`/elections?organizationId=${org.organizationID}`}>See elections</RouterLink>
+          <RouterLink to={`/processes?organizationId=${org.organizationID}`}>See elections</RouterLink>
         </Button>
       </Table.Cell>
     </Table.Row>

@@ -14,7 +14,7 @@ const NotFoundPage = () => (
         <RouterLink to='/'>Go to dashboard</RouterLink>
       </Button>
       <Button asChild size='sm' variant='outline'>
-        <RouterLink to='/elections'>Browse elections</RouterLink>
+        <RouterLink to='/processes'>Browse elections</RouterLink>
       </Button>
       <Button asChild size='sm' variant='outline'>
         <RouterLink to='/search'>Search</RouterLink>

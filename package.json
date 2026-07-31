@@ -23,6 +23,8 @@
     "lint": "tsc --noEmit && eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview --port 4173",
     "check:results": "node scripts/check-results.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "chakra:typegen": "chakra typegen ./src/theme/system.ts",
     "postinstall": "chakra typegen ./src/theme/system.ts"
   },
@@ -59,6 +61,7 @@
     "eslint-plugin-react-refresh": "^0.4.12",
     "typescript": "^5.6.3",
     "vite": "^5.4.8",
-    "vite-tsconfig-paths": "^4.3.2"
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^2.1.9"
   }
 }

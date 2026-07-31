@@ -96,7 +96,7 @@ const ElectionDetailPage = () => {
         actions={
           <>
             <Button asChild size='sm'>
-              <RouterLink to={`/votes?electionId=${electionId}`}>All votes</RouterLink>
+              <RouterLink to={`/envelopes?electionId=${electionId}`}>All votes</RouterLink>
             </Button>
             <Button asChild size='sm' variant='outline'>
               <RouterLink to='/verify'>Verify vote</RouterLink>
@@ -115,7 +115,7 @@ const ElectionDetailPage = () => {
         <Text>
           Organized by{' '}
           <Link asChild variant='plain'>
-            <RouterLink to={`/organizations/${election.data?.organizationId}`}>{orgLabel}</RouterLink>
+            <RouterLink to={`/account/${election.data?.organizationId}`}>{orgLabel}</RouterLink>
           </Link>
         </Text>
         <HashDisplay value={electionId} copyLabel='Election ID' />
@@ -224,7 +224,7 @@ const ElectionDetailPage = () => {
                 {votesRows.map((v) => (
                   <Table.Row key={v.voteID}>
                     <Table.Cell>
-                      <HashDisplay value={v.voteID} copyLabel='Vote ID' to={`/votes/${v.voteID}`} />
+                      <HashDisplay value={v.voteID} copyLabel='Vote ID' to={`/envelope#${v.voteID}`} />
                     </Table.Cell>
                     <Table.Cell>
                       <HashDisplay value={v.voterID} copyLabel='Voter ID' />

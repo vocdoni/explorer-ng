@@ -46,10 +46,10 @@ const VotesPage = () => {
               {rows.map((v) => (
                 <Table.Row key={v.voteID}>
                   <Table.Cell>
-                    <HashDisplay value={v.voteID} copyLabel='Vote ID' to={`/votes/${v.voteID}`} />
+                    <HashDisplay value={v.voteID} copyLabel='Vote ID' to={`/envelope#${v.voteID}`} />
                   </Table.Cell>
                   <Table.Cell>
-                    <HashDisplay value={v.electionID} copyLabel='Election ID' to={`/elections/${v.electionID}`} />
+                    <HashDisplay value={v.electionID} copyLabel='Election ID' to={`/process/${v.electionID}`} />
                   </Table.Cell>
                   <Table.Cell>
                     <HashDisplay value={v.voterID} copyLabel='Voter ID' />
@@ -59,7 +59,7 @@ const VotesPage = () => {
                       <RelativeTime value={v.blockTime} mode='relative' fontSize='sm' />
                     ) : (
                       <Link asChild variant='plain'>
-                        <RouterLink to={`/blocks/${v.blockHeight ?? ''}`}>block {v.blockHeight ?? 0}</RouterLink>
+                        <RouterLink to={`/block/${v.blockHeight ?? ''}`}>block {v.blockHeight ?? 0}</RouterLink>
                       </Link>
                     )}
                   </Table.Cell>

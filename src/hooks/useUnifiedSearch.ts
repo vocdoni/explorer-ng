@@ -39,7 +39,7 @@ export const useUnifiedSearch = () => {
       // Block height is the only purely numeric identifier.
       if (/^[0-9]+$/.test(q)) {
         setStatus('idle')
-        nav(`/blocks/${q}`)
+        nav(`/block/${q}`)
         return
       }
 
@@ -51,18 +51,22 @@ export const useUnifiedSearch = () => {
       // 40 hex characters is an account / organization address.
       if (q.length === 40) {
         setStatus('idle')
-        nav(`/organizations/${q}`)
+        nav(`/account/${q}`)
         return
       }
 
       // Election IDs, vote nullifiers, transaction hashes and block hashes are
       // all 64 hex characters, so shape cannot tell them apart — ask the chain
       // which one actually exists, in order of how often it is searched for.
+      //
+      // The left side of each test is an API path and the right side is a route;
+      // they read alike but are not interchangeable, least of all for votes,
+      // whose route carries the nullifier in the fragment.
       if (q.length === 64) {
         const target = (await resolves(`/elections/${q}`))
-          ? `/elections/${q}`
+          ? `/process/${q}`
           : (await resolves(`/votes/${q}`))
-            ? `/votes/${q}`
+            ? `/envelope#${q}`
             : (await resolves(`/chain/transactions/${q}`))
               ? `/transactions/${q}`
               : undefined
@@ -78,7 +82,7 @@ export const useUnifiedSearch = () => {
           const block = await fetchJson<{ height?: number }>(`${apiUrl}/chain/blocks/hash/${q}`)
           if (typeof block.height === 'number') {
             setStatus('idle')
-            nav(`/blocks/${block.height}`)
+            nav(`/block/${block.height}`)
             return
           }
         } catch {

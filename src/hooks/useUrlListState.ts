@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useCallback, useMemo, useRef } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 /** The shape both the defaults and the resolved state take: every list-state
  *  value is stored as a string, since that is what a URL can carry. */
@@ -35,7 +35,9 @@ const toNumber = (value: string, fallback: string): number => {
  * fifteen keystrokes between the list and wherever the user came from.
  */
 export const useUrlListState = <K extends string>(defaults: UrlListState<K>): UrlListStateApi<K> => {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
+  const { hash } = useLocation()
+  const navigate = useNavigate()
 
   const state = useMemo(() => {
     const resolved = {} as UrlListState<K>
@@ -45,22 +47,28 @@ export const useUrlListState = <K extends string>(defaults: UrlListState<K>): Ur
     return resolved
   }, [searchParams, defaults])
 
+  // Read at call time, not captured: `setState` has to keep a stable identity
+  // because the debounced filter effects list it as a dependency, and a URL that
+  // changed on every keystroke would otherwise restart their timers.
+  const latest = useRef({ searchParams, hash })
+  latest.current = { searchParams, hash }
+
+  // `setSearchParams` would do all of this, except that it navigates to a bare
+  // `?…`, which react-router resolves with an empty fragment — silently dropping
+  // it. Some identifiers live only in the fragment (see `~hooks/useHashIds`), so
+  // it is carried across by hand.
   const setState = useCallback(
     (patch: Partial<UrlListState<K>>) => {
-      setSearchParams(
-        (current) => {
-          const next = new URLSearchParams(current)
-          for (const [key, value] of Object.entries(patch) as [K, string | undefined][]) {
-            if (value === undefined) continue
-            if (value === defaults[key]) next.delete(key)
-            else next.set(key, value)
-          }
-          return next
-        },
-        { replace: true }
-      )
+      const next = new URLSearchParams(latest.current.searchParams)
+      for (const [key, value] of Object.entries(patch) as [K, string | undefined][]) {
+        if (value === undefined) continue
+        if (value === defaults[key]) next.delete(key)
+        else next.set(key, value)
+      }
+      const search = next.toString()
+      navigate({ search: search ? `?${search}` : '', hash: latest.current.hash }, { replace: true })
     },
-    [setSearchParams, defaults]
+    [navigate, defaults]
   )
 
   const num = useCallback((key: K) => toNumber(state[key], defaults[key]), [state, defaults])
