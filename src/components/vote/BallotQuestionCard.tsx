@@ -30,10 +30,18 @@ const ChoiceRow = ({ choice }: { choice: BallotChoice }) => (
     <Text fontSize='sm' fontWeight={choice.chosen ? 'bold' : 'normal'} flex='1' minW={0}>
       {choice.label}
     </Text>
-    {choice.chosen && (
-      <Text fontSize='xs' color='green.600' fontWeight='bold' flexShrink={0}>
-        Your choice
+    {choice.amount !== undefined ? (
+      // Budget and quadratic ballots carry an amount per option rather than a pick,
+      // so "Your choice" would say nothing about how much was actually allocated.
+      <Text fontSize='xs' color={choice.chosen ? 'green.600' : 'texts.subtle'} fontWeight='bold' flexShrink={0}>
+        {choice.amount.toLocaleString()}
       </Text>
+    ) : (
+      choice.chosen && (
+        <Text fontSize='xs' color='green.600' fontWeight='bold' flexShrink={0}>
+          Your choice
+        </Text>
+      )
     )}
   </Flex>
 )
@@ -42,7 +50,9 @@ const ChoiceRow = ({ choice }: { choice: BallotChoice }) => (
 export const BallotQuestionCard = ({ question, total }: { question: BallotQuestion; total: number }) => (
   <Box borderWidth='1px' borderColor='border' borderRadius='md' p={{ base: 4, md: 5 }}>
     <Text fontSize='xs' color='texts.subtle' textTransform='uppercase' letterSpacing='wide' mb={1}>
-      Question {question.position + 1} of {total}
+      {/* Only multi-question ballots have a counter worth showing; every other layout
+          puts all its fields into a single question. */}
+      {total > 1 ? `Question ${question.position + 1} of ${total}` : 'Question'}
     </Text>
     <Text fontWeight='bold' fontSize='lg' lineHeight={1.3}>
       {question.title}
