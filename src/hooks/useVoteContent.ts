@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import * as naclNamespace from 'tweetnacl'
 import { useElectionKeys } from '~hooks/useVoconeApi'
 import type { Election, ElectionMetadata, LocalizedText, Vote } from '~types/api'
+import { resolveResultsKind, wireValuesUsable, type ResultsKind } from '~utils/ballotResults'
 
 // tweetnacl and blakejs are CommonJS. Depending on which interop the bundler
 // applies, the functions land either directly on the namespace or under
@@ -92,6 +93,8 @@ export interface BallotChoice {
   value: number
   label: string
   chosen: boolean
+  /** Credits or units of support allocated, on budget and quadratic ballots. */
+  amount?: number
 }
 
 export interface BallotQuestion {
@@ -106,13 +109,9 @@ export interface BallotQuestion {
 }
 
 export type BallotShape =
-  /** One value per question, each naming a choice. */
-  | 'choices'
-  /** A single question the voter picked several entries in. */
-  | 'multi-choice'
-  /** Amounts rather than choice names (quadratic / weighted ballots). */
-  | 'weighted'
-  /** Package readable but its shape does not line up with the metadata. */
+  /** The ballot layout, resolved the same way the results page resolves it. */
+  | ResultsKind
+  /** Package readable but its layout could not be established from the election. */
   | 'raw'
 
 export type BallotStatus =
@@ -162,32 +161,75 @@ const parseSealed = (value: unknown): Uint8Array | undefined => {
   }
 }
 
-/** Distribute the package entries over the metadata questions. */
-const buildQuestions = (votes: number[], metadata: ElectionMetadata | undefined, shape: BallotShape) => {
+/**
+ * Distribute the package entries over the metadata questions.
+ *
+ * How an entry maps onto an option is exactly the question the results page answers
+ * for the aggregate tally, so the layout comes from the same resolver — otherwise a
+ * single ballot and the tally it was counted into can disagree about what it says.
+ * The mapping itself is local because `@vocdoni/ballot` encodes selections into a
+ * ballot but has no inverse.
+ */
+const buildQuestions = (
+  votes: number[],
+  metadata: ElectionMetadata | undefined,
+  shape: BallotShape,
+  maxValue: number | undefined
+) => {
   const questions = metadata?.questions ?? []
-  if (!questions.length || shape === 'weighted' || shape === 'raw') return []
+  if (!questions.length || shape === 'raw') return []
 
-  return questions.map((question, position) => {
-    const values = shape === 'multi-choice' ? votes : votes.slice(position, position + 1)
-    const choices = (question.choices ?? []).map((choice, choicePosition) => {
-      // Metadata choices carry the encoded `value`; it usually equals the
-      // position but the protocol does not require that, so honour it.
-      const value = typeof choice.value === 'number' ? choice.value : choicePosition
-      return {
-        position: choicePosition,
-        value,
-        label: localized(choice.title) ?? `Choice ${value}`,
-        chosen: values.includes(value),
+  // Only the single-choice layout spreads across several questions; every other
+  // layout puts all of its fields into one.
+  const target = shape === 'single-choice' ? questions : questions.slice(0, 1)
+
+  return target.map((question, position) => {
+    const metaChoices = question.choices ?? []
+    const useWireValues = wireValuesUsable(metaChoices, maxValue)
+    const numChoices = metaChoices.length
+
+    const choices: BallotChoice[] = metaChoices.map((choice, choicePosition) => {
+      // Metadata choices carry an encoded `value`, but only when it fits the wire
+      // alphabet — some elections put 1-based display labels there. See
+      // `wireValuesUsable` in `~utils/ballotResults`.
+      const value = useWireValues && typeof choice.value === 'number' ? choice.value : choicePosition
+      const label = localized(choice.title) ?? `Choice ${value}`
+
+      switch (shape) {
+        case 'single-choice':
+          // One field per question; its value names the chosen option.
+          return { position: choicePosition, value, label, chosen: votes[position] === value }
+        case 'approval':
+          // Dense 0/1 vector: one field per option, in choice order.
+          return { position: choicePosition, value, label, chosen: votes[choicePosition] === 1 }
+        case 'multichoice':
+          // Pick-slots holding the chosen options' values, in any order.
+          return { position: choicePosition, value, label, chosen: votes.includes(value) }
+        case 'budget':
+        case 'quadratic': {
+          // One field per option, holding the amount allocated to it.
+          const amount = votes[choicePosition] ?? 0
+          return { position: choicePosition, value, label, chosen: amount > 0, amount }
+        }
       }
     })
+
+    const values = shape === 'single-choice' ? votes.slice(position, position + 1) : votes
+    // Values naming nothing published. Multichoice pads unused pick-slots with
+    // sentinels at or above the choice count, which are blanks rather than answers.
     const known = new Set(choices.map((c) => c.value))
+    const unmatched =
+      shape === 'budget' || shape === 'quadratic' || shape === 'approval'
+        ? []
+        : values.filter((v) => !known.has(v) && !(shape === 'multichoice' && v >= numChoices))
+
     return {
       position,
       title: localized(question.title) ?? `Question ${position + 1}`,
       description: localized(question.description),
       choices,
       values,
-      unmatched: values.filter((v) => !known.has(v)),
+      unmatched,
     }
   })
 }
@@ -267,20 +309,22 @@ export const useVoteContent = (vote?: Vote, election?: Election): VoteContent =>
   const votes = pkg?.votes
   const questionCount = election?.metadata?.questions?.length ?? 0
 
+  // The same resolution the results page uses, so a ballot and the tally it was
+  // counted into never disagree about what its numbers mean.
+  const kind = useMemo(() => resolveResultsKind(election), [election])
+
   const shape: BallotShape = useMemo(() => {
-    if (!votes) return 'choices'
-    const costExponent = numberField(tallyMode, 'costExponent')
-    const maxTotalCost = numberField(tallyMode, 'maxTotalCost')
-    if (costExponent >= 2 || maxTotalCost > 0) return 'weighted'
-    if (!questionCount) return 'raw'
-    if (questionCount === votes.length) return 'choices'
-    if (questionCount === 1) return 'multi-choice'
-    return 'raw'
-  }, [votes, tallyMode, questionCount])
+    if (!votes || !questionCount || !kind) return 'raw'
+    // A layout the explorer knows still has to fit the ballot in front of it: a
+    // package of the wrong length means the two do not describe the same election.
+    const expected = kind === 'single-choice' ? questionCount : undefined
+    if (expected !== undefined && votes.length !== expected) return 'raw'
+    return kind
+  }, [votes, questionCount, kind])
 
   const questions = useMemo(
-    () => (votes ? buildQuestions(votes, election?.metadata, shape) : []),
-    [votes, election?.metadata, shape]
+    () => (votes ? buildQuestions(votes, election?.metadata, shape, numberField(tallyMode, 'maxValue')) : []),
+    [votes, election?.metadata, shape, tallyMode]
   )
 
   let status: BallotStatus = 'unavailable'

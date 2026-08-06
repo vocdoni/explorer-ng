@@ -73,8 +73,9 @@ export const BallotContents = ({ content }: { content: VoteContent }) => {
       )
     }
 
-    const showCards =
-      (content.shape === 'choices' || content.shape === 'multi-choice') && content.questions.length > 0
+    // Every layout the explorer can resolve renders as cards now, including budget and
+    // quadratic ballots, which used to fall through to a bare list of numbers.
+    const showCards = content.shape !== 'raw' && content.questions.length > 0
 
     if (showCards) {
       return (
@@ -89,20 +90,14 @@ export const BallotContents = ({ content }: { content: VoteContent }) => {
     return (
       <Box borderWidth='1px' borderColor='border' borderRadius='md' p={{ base: 4, md: 5 }}>
         <Text fontWeight='bold' mb={3}>
-          {content.shape === 'weighted' ? 'The values on this ballot' : 'The numbers on this ballot'}
+          The numbers on this ballot
         </Text>
         <RawValues votes={content.votes} />
-        {content.shape === 'weighted' ? (
-          <Explainer>
-            This election does not ask for a single pick per question — each number is an amount the voter spread
-            across the options, and the cost of an amount grows faster than the amount itself. The values above are
-            exactly what was recorded; the election page shows how they were tallied.
-          </Explainer>
-        ) : content.hasMetadata ? (
+        {content.hasMetadata ? (
           <Explainer>
             This ballot carries {content.votes.length} value{content.votes.length === 1 ? '' : 's'}, which does not
-            line up with the {content.questions.length || 'published'} question wording for this election, so the
-            raw numbers are shown rather than a guess at what they mean.
+            line up with the ballot layout this election published, so the raw numbers are shown rather than a guess
+            at what they mean.
           </Explainer>
         ) : (
           <Explainer>

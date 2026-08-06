@@ -15,7 +15,9 @@ import { Link as RouterLink, useParams } from 'react-router-dom'
 import { BallotConfigCard } from '~components/election/BallotConfigCard'
 import { ElectionCostPanel } from '~components/election/ElectionCostPanel'
 import { LifecycleTimeline } from '~components/election/LifecycleTimeline'
-import { QuestionResultsCard, type QuestionResult } from '~components/election/QuestionResults'
+import { QuestionResultsCard } from '~components/election/QuestionResults'
+import { RawResultsMatrix } from '~components/election/RawResultsMatrix'
+import { ResultsSummary } from '~components/election/ResultsSummary'
 import { TurnoutGauge } from '~components/election/TurnoutGauge'
 import { VoteActivityChart } from '~components/election/VoteActivityChart'
 import { EmptyState } from '~components/shared/EmptyState'
@@ -36,17 +38,8 @@ import {
   useElectionVotes,
   useOrganizationMeta,
 } from '~hooks/useVoconeApi'
-import type { LocalizedText } from '~types/api'
+import { buildElectionResults } from '~utils/ballotResults'
 import { formatDate, shortHex } from '~utils/format'
-
-/** Pick the readable string out of a metadata field that may be a bare string
- *  or a `{ default, en, es, … }` map — question/choice titles use the same
- *  localized shape as the election title/description. */
-const localizedText = (value?: LocalizedText | string): string | undefined => {
-  if (!value) return undefined
-  if (typeof value === 'string') return value.trim() || undefined
-  return value.default ?? Object.values(value).find((v) => typeof v === 'string' && v.trim())
-}
 
 const DEFAULTS = { tab: 'questions', votesPage: '0', feesPage: '0' }
 
@@ -80,20 +73,9 @@ const ElectionDetailPage = () => {
   const sampleVotes = useMemo(() => voteAnalytics.data?.votes ?? [], [voteAnalytics.data])
   const analytics = useElectionAnalytics(electionId, election.data, sampleVotes)
 
-  // One results card per question — falls back to "Option N" labels when the
-  // election predates metadata or the metadata is missing choice titles.
-  const questionResults = useMemo<QuestionResult[]>(() => {
-    const resultRows = election.data?.result ?? []
-    const questions = election.data?.metadata?.questions ?? []
-    return resultRows.map((row, qi) => {
-      const values = row.map((v) => Number(v ?? 0))
-      const total = values.reduce((a, b) => a + b, 0)
-      const question = questions[qi]
-      const title = localizedText(question?.title) || `Question ${qi + 1}`
-      const choiceLabels = values.map((_, ci) => localizedText(question?.choices?.[ci]?.title) || `Option ${ci + 1}`)
-      return { title, values, total, choiceLabels }
-    })
-  }, [election.data])
+  // How the raw `result` histogram should be read depends on the ballot type — a row
+  // is a ballot field, not a question. See `~utils/ballotResults`.
+  const results = useMemo(() => buildElectionResults(election.data), [election.data])
 
   // `voteMode.encryptedVotes` is authoritative; a published keys document is a
   // useful fallback for elections that predate the flag.
@@ -157,12 +139,38 @@ const ElectionDetailPage = () => {
 
         <Tabs.Content value='questions' p={0}>
           <Stack gap={6}>
-            {questionResults.length === 0 && (
-              <EmptyState title='No results yet' hint='Results appear once voting closes and the tally is published.' />
+            {results && <ResultsSummary results={results} election={election.data} encrypted={encrypted} />}
+
+            {results && results.matrix.length === 0 ? (
+              // Only when the chain published no tally at all. An all-zero matrix is a
+              // real result — nobody voted — and saying "no results yet" about a closed
+              // election would be false.
+              encrypted && election.data?.finalResults !== true ? (
+                <EmptyState
+                  title='Results are sealed'
+                  hint='Ballots are encrypted. The tally becomes available once voting closes and the decryption keys are published.'
+                />
+              ) : (
+                <EmptyState
+                  title='No results yet'
+                  hint='Results appear once voting closes and the tally is published.'
+                />
+              )
+            ) : results?.raw ? (
+              <RawResultsMatrix matrix={results.matrix} />
+            ) : (
+              results?.questions.map((question, qi) => (
+                <QuestionResultsCard
+                  key={qi}
+                  question={question}
+                  index={qi}
+                  results={results}
+                  total={results.questions.length}
+                />
+              ))
             )}
-            {questionResults.map((question, qi) => (
-              <QuestionResultsCard key={qi} question={question} index={qi} />
-            ))}
+
+            <BallotConfigCard election={election.data} results={results} />
           </Stack>
         </Tabs.Content>
 
@@ -268,10 +276,6 @@ const ElectionDetailPage = () => {
               creationHeight={createdBlock.data?.height}
             />
 
-            <BallotConfigCard
-              election={election.data}
-              choiceCount={election.data?.metadata?.questions?.[0]?.choices?.length}
-            />
           </Stack>
         </Tabs.Content>
 
