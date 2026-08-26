@@ -1,4 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useApi } from '~contexts/ApiContext'
 import type {
   Block,
@@ -18,6 +19,7 @@ import type {
   Vote,
   VotesList,
 } from '~types/api'
+import { resolveElectionMetadata, withMetadata } from '~utils/electionMetadata'
 import { ApiError, fetchJson } from '~utils/http'
 
 const q = (base: string, path: string) => `${base}${path}`
@@ -72,23 +74,51 @@ export const electionMetaFrom = (metadata?: ElectionMetadata): ElectionMeta => (
 const ELECTION_META_STALE_MS = 30 * 60 * 1000
 
 /**
- * Human-readable title/description for an election. Metadata is immutable once
- * an election is created, so this is cached hard and never polled — unlike the
- * election record itself, which carries the live vote count.
+ * An election's metadata document, wherever it lives.
+ *
+ * Metadata is immutable once an election is created, so this is cached hard and
+ * never polled — unlike the election record itself, which carries the live vote
+ * count. Every consumer that needs question wording, choice labels or the ballot
+ * type shares this one cache entry.
  */
-export const useElectionMeta = (electionId?: string) => {
+export const useElectionMetadata = (electionId?: string) => {
   const { apiUrl } = useApi()
   return useQuery({
-    queryKey: ['election-meta', apiUrl, electionId],
+    queryKey: ['election-metadata', apiUrl, electionId],
     queryFn: async () => {
       const election = await fetchJson<Election>(q(apiUrl, `/elections/${electionId}`))
-      return electionMetaFrom(election.metadata)
+      return (await resolveElectionMetadata(election)) ?? null
     },
     enabled: !!electionId,
     staleTime: ELECTION_META_STALE_MS,
     gcTime: ELECTION_META_STALE_MS,
     retry: false,
   })
+}
+
+/** Human-readable title/description for an election. */
+export const useElectionMeta = (electionId?: string) => {
+  const metadata = useElectionMetadata(electionId)
+  return { ...metadata, data: metadata.data ? electionMetaFrom(metadata.data) : undefined }
+}
+
+/**
+ * The live election record with its metadata document inlined.
+ *
+ * Two queries on purpose: the record carries the vote count and is polled, the
+ * metadata is immutable and is not. Pages that need question wording or the
+ * ballot type should use this rather than `useElection`, so an election whose
+ * metadata the gateway left as a URL reads the same as one it resolved.
+ */
+export const useElectionWithMetadata = (electionId: string) => {
+  const election = useElection(electionId)
+  const metadata = useElectionMetadata(electionId)
+  const remote = metadata.data
+  const data = useMemo(
+    () => (election.data ? withMetadata(election.data, remote) : election.data),
+    [election.data, remote]
+  )
+  return { ...election, data, metadataLoading: metadata.isLoading }
 }
 
 /**
@@ -105,10 +135,12 @@ export const useElectionTitles = (ids: string[]) => {
 
   return useQueries({
     queries: capped.map((id) => ({
-      queryKey: ['election-meta', apiUrl, id],
+      // Same key as `useElectionMetadata`, so a row already opened resolves from
+      // cache and a list row primes the detail page.
+      queryKey: ['election-metadata', apiUrl, id],
       queryFn: async () => {
         const election = await fetchJson<Election>(q(apiUrl, `/elections/${id}`))
-        return electionMetaFrom(election.metadata)
+        return (await resolveElectionMetadata(election)) ?? null
       },
       staleTime: ELECTION_META_STALE_MS,
       gcTime: ELECTION_META_STALE_MS,
@@ -117,7 +149,7 @@ export const useElectionTitles = (ids: string[]) => {
     combine: (results) => {
       const titles: Record<string, string | undefined> = {}
       capped.forEach((id, i) => {
-        titles[id] = results[i]?.data?.title
+        titles[id] = results[i]?.data ? electionMetaFrom(results[i].data).title : undefined
       })
       return { titles, isLoading: results.some((r) => r.isLoading) }
     },

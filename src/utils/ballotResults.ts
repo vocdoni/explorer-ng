@@ -44,6 +44,59 @@ const KIND_BY_TYPE_NAME: Record<string, ResultsKind> = {
   quadratic: 'quadratic',
 }
 
+/**
+ * Whether `tallyMode` actually backs up the type the metadata claims.
+ *
+ * The legacy SDK derived both from the same call, so its label is reliable (71 of 71
+ * sampled agree). The SaaS API does not: it writes `single-choice-multiquestion` into
+ * every document it produces, including ballots that are plainly something else — one
+ * sampled election titled "test ranked" carries that label, and another, an approval
+ * ballot over three options, would decode as single-choice reading only the first
+ * matrix row and dropping its third option entirely.
+ *
+ * So the label is a hint that has to survive a check against the on-chain
+ * configuration, which cannot lie: it is what the scrutinizer actually applied.
+ */
+const corroborated = (kind: ResultsKind, questionCount: number, choiceCounts: number[], tally: BallotBounds): boolean => {
+  const { maxCount, maxValue } = tally
+  if (maxCount === undefined || maxValue === undefined) return false
+  const widest = choiceCounts.length ? Math.max(...choiceCounts) : 0
+
+  switch (kind) {
+    case 'single-choice':
+      // One field per question, each holding a choice index.
+      return maxCount === questionCount && maxValue === widest - 1
+    case 'multichoice':
+      // One field per pick-slot; the alphabet has to address every choice.
+      return questionCount === 1 && maxCount > 1 && maxValue >= widest - 1
+    case 'approval':
+      // Dense 0/1 vector: one field per option.
+      return questionCount === 1 && maxValue === 1 && maxCount === widest
+    case 'budget':
+    case 'quadratic':
+      // `maxValue === 0` is the aggregated-amounts marker.
+      return maxValue === 0
+  }
+}
+
+/**
+ * The shape a ranked ballot takes: distinct values, and enough of them to rank every
+ * field. It is byte-identical to a pick-slot multichoice that fills every slot — the
+ * package's own README says telling them apart "needs an explicit signal, not better
+ * inference" — so without a label we can corroborate, neither reading is defensible
+ * and the matrix is shown instead.
+ */
+const looksRanked = (tally: BallotBounds, uniqueValues: boolean): boolean => {
+  const { maxCount, maxValue } = tally
+  if (!uniqueValues || maxCount === undefined || maxValue === undefined) return false
+  return maxValue > 0 && maxCount > 1 && maxValue >= maxCount - 1
+}
+
+interface BallotBounds {
+  maxCount?: number
+  maxValue?: number
+}
+
 const KIND_BY_BALLOT_TYPE: Record<BallotType, ResultsKind> = {
   [BallotType.SingleChoice]: 'single-choice',
   [BallotType.Approval]: 'approval',
@@ -320,12 +373,29 @@ export const buildElectionResults = (election?: Election): ElectionResultsView |
     synthesizedLabels: true,
   })
 
-  // The creator's own label wins; shape inference is the fallback.
-  let kind = typeName ? KIND_BY_TYPE_NAME[typeName] : undefined
+  const questionCount = election.metadata?.questions?.length ?? 0
+  const choiceCounts = (election.metadata?.questions ?? []).map((question) => (question.choices ?? []).length)
+  const bounds: BallotBounds = { maxCount, maxValue }
+  const uniqueValues = bool(vote, 'uniqueValues') ?? false
+
+  // The creator's label wins only if the on-chain configuration backs it up.
+  const claimed = typeName ? KIND_BY_TYPE_NAME[typeName] : undefined
+  const claimHolds = claimed !== undefined && corroborated(claimed, questionCount, choiceCounts, bounds)
+
+  let kind = claimHolds ? claimed : undefined
   let source: 'metadata' | 'inferred' = kind ? 'metadata' : 'inferred'
+  const shapeFields = `tallyMode.maxCount = ${maxCount ?? '?'}, maxValue = ${maxValue ?? '?'}, costExponent = ${costExponent ?? '?'}`
   let provenance = kind
     ? `metadata.type.name = ${typeName}`
-    : `tallyMode.maxCount = ${maxCount ?? '?'}, maxValue = ${maxValue ?? '?'}, costExponent = ${costExponent ?? '?'}`
+    : claimed !== undefined
+      ? `metadata.type.name = ${typeName} contradicts ${shapeFields}, so the configuration was read instead`
+      : shapeFields
+
+  // A ranked ballot and a filled pick-slot multichoice are indistinguishable, and
+  // nothing aggregates ranked results, so an uncorroborated one is not guessed at.
+  if (kind === undefined && questionCount > 0 && looksRanked(bounds, uniqueValues)) {
+    return rawView('single-choice', 'inferred', `${provenance}; ranked or multichoice cannot be told apart here`)
+  }
 
   let questions = toPackageQuestions(election.metadata, maxValue)
   let synthesizedLabels = false

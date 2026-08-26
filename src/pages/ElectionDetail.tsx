@@ -32,7 +32,7 @@ import { useUrlListState } from '~hooks/useUrlListState'
 import {
   electionMetaFrom,
   useDateToBlock,
-  useElection,
+  useElectionWithMetadata,
   useElectionKeys,
   useElectionScrutiny,
   useElectionVotes,
@@ -48,7 +48,7 @@ const ElectionDetailPage = () => {
   const { state, setState, num } = useUrlListState(DEFAULTS)
   const page = num('votesPage')
   const feesPage = num('feesPage')
-  const election = useElection(electionId)
+  const election = useElectionWithMetadata(electionId)
   const votes = useElectionVotes(electionId, page, 20)
   const voteAnalytics = useElectionVotes(electionId, 0, 300)
   const keys = useElectionKeys(electionId)

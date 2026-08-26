@@ -70,6 +70,28 @@ Three behaviours in this layer encode real API quirks — preserve them:
 cache key with `useElectionMeta`, and **caps the id list at 24** — there is no bulk-metadata endpoint,
 so an uncapped page would fan out into an unbounded request burst.
 
+### Election metadata
+
+Titles, question wording, choice labels and the ballot type all live in the **metadata
+document**, and the gateway only sometimes inlines it. `ipfs://` documents come back in
+`election.metadata`; `https://` ones — what the SaaS API writes — are left as a bare
+`metadataURL`, and about a fifth of recent elections on the LTS gateway are in that
+state. Without following the URL those elections render as bare ids in every list and as
+an uninterpretable tally on their own page.
+
+`src/utils/electionMetadata.ts` resolves it, and `useElectionMetadata` /
+`useElectionWithMetadata` / `useElectionTitles` in `useVoconeApi.ts` all share one cache
+entry keyed `['election-metadata', apiUrl, id]`. Metadata is immutable, so it is cached
+hard (30 min) and never polled — `useElectionWithMetadata` deliberately keeps it in a
+separate query from the polled election record. **Pages needing question wording or the
+ballot type must use `useElectionWithMetadata`, not `useElection`.**
+
+`metadataURL` is written by whoever created the election, so it is untrusted input: only
+`http(s)` is followed (never `data:`, `file:` or `javascript:`), no credentials are sent,
+a non-object document is discarded, and any failure degrades to "no metadata" rather than
+failing the election. `ipfs://` is deliberately not resolved — the gateway already inlines
+those, and choosing a public IPFS gateway here would send readers to a third party.
+
 ### Results interpretation
 
 `election.result` is a **histogram**, not a tally: `result[field][value]` counts the units
@@ -83,10 +105,16 @@ returns the same raw matrix, so the interpretation is necessarily client-side.
 page and the vote-detail page. The arithmetic comes from `@vocdoni/ballot`'s
 `decodeResults`; what lives here is everything a gateway payload can't tell that package:
 
-- **Ballot type comes from `metadata.type.name`**, not from shape inference. Shape alone
-  cannot separate a legacy two-option multichoice (`maxValue = numChoices - 1 = 1`) from
-  an approval ballot, nor a ranked ballot from a pick-slot multichoice — those are
-  byte-identical. `inferBallotType` is only the fallback.
+- **Ballot type comes from `metadata.type.name`, but only once `tallyMode` corroborates
+  it.** Shape alone cannot separate a legacy two-option multichoice
+  (`maxValue = numChoices - 1 = 1`) from an approval ballot, nor a ranked ballot from a
+  pick-slot multichoice — those are byte-identical, so the creator's label is the only
+  signal. But the label is not always honest: the legacy SDK derived both from one call
+  and agrees 71/71, while the SaaS API stamps `single-choice-multiquestion` on every
+  document it writes, contradicting `tallyMode` in 5 of 25 sampled. Trusting it there
+  reads only the first matrix row and silently drops options. `corroborated()` checks the
+  claim against the on-chain configuration, which cannot lie; `inferBallotType` is the
+  fallback, and an uncorroborated ranked signature resolves to `raw` rather than a guess.
 - **`BRANCH_VOTE_TYPE` synthesizes a `voteType` to steer `decodeResults`' internal
   branch** for the type we already resolved. Those numbers are not the election's real
   configuration and must never be passed to `voteTypeBounds`, `validateSelections` or
