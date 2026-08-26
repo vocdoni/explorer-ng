@@ -32,7 +32,7 @@ import { useUrlListState } from '~hooks/useUrlListState'
 import {
   electionMetaFrom,
   useDateToBlock,
-  useElection,
+  useElectionWithMetadata,
   useElectionKeys,
   useElectionScrutiny,
   useElectionVotes,
@@ -48,7 +48,7 @@ const ElectionDetailPage = () => {
   const { state, setState, num } = useUrlListState(DEFAULTS)
   const page = num('votesPage')
   const feesPage = num('feesPage')
-  const election = useElection(electionId)
+  const election = useElectionWithMetadata(electionId)
   // A single 300-row sample backs both the analytics timeline and the votes
   // tab for its first 15 pages (300 / 20) — one request instead of two
   // overlapping ones. Only pages beyond that fall back to a small dedicated
