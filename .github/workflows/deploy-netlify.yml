@@ -76,6 +76,12 @@ jobs:
           VOCONE_REFRESH_MS: ${{ vars.VOCONE_REFRESH_MS }}
 
       - name: Deploy to Netlify
+        # Dependabot-triggered runs never receive Actions secrets (they only see
+        # the separate Dependabot secrets store), so NETLIFY_AUTH_TOKEN/SITE_ID
+        # come up empty and fails-without-credentials turns that into a hard
+        # failure. A dependency bump doesn't need a deploy preview anyway, so
+        # skip the deploy and let the build above act as the CI check.
+        if: github.actor != 'dependabot[bot]'
         uses: nwtgck/actions-netlify@v4.0
         with:
           publish-dir: './dist'
