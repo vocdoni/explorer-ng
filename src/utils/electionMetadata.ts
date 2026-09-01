@@ -37,10 +37,18 @@ export const remoteMetadataUrl = (election: Election): string | undefined => {
 }
 
 /**
+ * The host behind `metadataURL` is named by the election's creator, so it is under no
+ * obligation to answer. Without a deadline a host that accepts the connection and then
+ * stalls holds a list row in "loading" for as long as the tab is open; a list page
+ * resolves up to 24 of these at once.
+ */
+const METADATA_TIMEOUT_MS = 8000
+
+/**
  * Inline metadata when the gateway resolved it, otherwise the document it points at.
  *
- * Never throws: an unreachable or malformed document leaves the election exactly as
- * unreadable as it was before, and every consumer already handles missing metadata.
+ * Never throws: an unreachable, slow or malformed document leaves the election exactly
+ * as unreadable as it was before, and every consumer already handles missing metadata.
  * Failing the whole election record over it would be worse than degrading.
  */
 export const resolveElectionMetadata = async (election: Election): Promise<ElectionMetadata | undefined> => {
@@ -48,7 +56,10 @@ export const resolveElectionMetadata = async (election: Election): Promise<Elect
   const url = remoteMetadataUrl(election)
   if (!url) return undefined
   try {
-    const document = await fetchJson<unknown>(url, { credentials: 'omit' })
+    const document = await fetchJson<unknown>(url, {
+      credentials: 'omit',
+      signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
+    })
     // A metadata document is an object. Anything else — an array, a string, an error
     // page that happened to parse — is not something to render an election from.
     if (!document || typeof document !== 'object' || Array.isArray(document)) return undefined

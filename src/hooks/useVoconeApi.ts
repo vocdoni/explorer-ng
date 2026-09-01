@@ -106,22 +106,31 @@ const ELECTION_META_STALE_MS = 30 * 60 * 1000
  * count. Every consumer that needs question wording, choice labels or the ballot
  * type shares this one cache entry.
  */
-export const useElectionMetadata = (electionId?: string) => {
+export const useElectionMetadata = (electionId?: string, options?: { from?: Election; enabled?: boolean }) => {
   const { apiUrl } = useApi()
+  const from = options?.from
   return useQuery({
     queryKey: ['election-metadata', apiUrl, electionId],
     queryFn: async () => {
-      const election = await fetchJson<Election>(q(apiUrl, `/elections/${electionId}`))
+      // `from` is the record a caller already holds. Without it this fetches
+      // `/elections/{id}` purely to read `metadata` / `metadataURL` off it, which on a
+      // page that is already polling that same endpoint is a duplicate request per view.
+      const election = from ?? (await fetchJson<Election>(q(apiUrl, `/elections/${electionId}`)))
       return (await resolveElectionMetadata(election)) ?? null
     },
-    enabled: !!electionId,
+    enabled: !!electionId && (options?.enabled ?? true),
     staleTime: ELECTION_META_STALE_MS,
     gcTime: ELECTION_META_STALE_MS,
     retry: false,
   })
 }
 
-/** Human-readable title/description for an election. */
+/**
+ * Human-readable title/description for an election, by id alone.
+ *
+ * Costs a `/elections/{id}` fetch of its own. A page that already holds the record
+ * should call `electionMetaFrom(election.data?.metadata)` on it instead of adding this.
+ */
 export const useElectionMeta = (electionId?: string) => {
   const metadata = useElectionMetadata(electionId)
   return { ...metadata, data: metadata.data ? electionMetaFrom(metadata.data) : undefined }
@@ -137,13 +146,16 @@ export const useElectionMeta = (electionId?: string) => {
  */
 export const useElectionWithMetadata = (electionId: string) => {
   const election = useElection(electionId)
-  const metadata = useElectionMetadata(electionId)
+  // Held until the record arrives and then resolved from it. The query key is the one
+  // list rows prime, so an election already opened elsewhere still resolves from cache
+  // without ever running this.
+  const metadata = useElectionMetadata(electionId, { from: election.data, enabled: !!election.data })
   const remote = metadata.data
   const data = useMemo(
     () => (election.data ? withMetadata(election.data, remote) : election.data),
     [election.data, remote]
   )
-  return { ...election, data, metadataLoading: metadata.isLoading }
+  return { ...election, data }
 }
 
 /**
