@@ -15,7 +15,8 @@ pnpm preview       # serve the production build on :4173
 Equivalent `make` targets exist (`install`, `dev`, `build`, `lint`, `preview`, `docker-*`).
 
 There is **no test suite** — no test runner, no test files, no `pnpm test`. `pnpm lint` (type-check +
-ESLint at zero warnings) is the only automated gate, and CI runs it before the Netlify deploy.
+ESLint at zero warnings) is the only automated gate, and **nothing runs it for you**: the Netlify
+workflow only runs `pnpm build`, and `vite build` does not type-check. Run it locally before pushing.
 
 `chakra typegen ./src/theme/system.ts` generates the Chakra UI type map into `node_modules`; it is not
 committed. Re-run it (`pnpm chakra:typegen`) after changing anything under `src/theme/` — recipe
@@ -133,7 +134,7 @@ rather than branching at a call site. A wrong denominator or a "most voted" badg
 running tally is the failure mode this whole path exists to prevent, so the copy is part
 of the logic, not decoration.
 
-`pnpm check:results` replays real elections from the public gateway through the adapter
+`pnpm check:results` (Node >= 22.18, for type stripping) replays real elections from the public gateway through the adapter
 and asserts the expected tallies, including two regression guards (the legacy
 `maxValue === 1` collision and the 1-based `choice.value` case). Run it after touching
 anything in this path — it is the only automated check of this arithmetic.

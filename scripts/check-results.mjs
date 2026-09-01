@@ -12,8 +12,23 @@
 // Loaded straight from source: Node strips the types, so what runs here is exactly
 // what the app runs — including the metadata resolution, which is why elections whose
 // document the gateway left as a URL are covered too.
-import { buildElectionResults } from '../src/utils/ballotResults.ts'
-import { remoteMetadataUrl, resolveElectionMetadata, withMetadata } from '../src/utils/electionMetadata.ts'
+//
+// That needs Node's built-in type stripping, unflagged since v22.18.0 and v23.6.0. The
+// package's `engines` floor is lower because the app itself builds anywhere above it, so
+// an older runtime fails on the imports below with a bare "Unknown file extension" that
+// reads like a broken script rather than a missing feature. The dynamic import keeps the
+// message ahead of the resolution.
+const [major, minor] = process.versions.node.split('.').map(Number)
+if (major < 22 || (major === 22 && minor < 18) || (major === 23 && minor < 6)) {
+  console.error(
+    `check:results loads TypeScript sources directly, which needs Node's built-in type ` +
+      `stripping (>= 22.18, or >= 23.6 on the 23.x line). This is Node ${process.versions.node}.`
+  )
+  process.exit(1)
+}
+
+const { buildElectionResults } = await import('../src/utils/ballotResults.ts')
+const { remoteMetadataUrl, resolveElectionMetadata, withMetadata } = await import('../src/utils/electionMetadata.ts')
 
 const API = process.argv[2] ?? 'https://api.vocdoni.io/v2'
 
