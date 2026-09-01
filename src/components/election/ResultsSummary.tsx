@@ -6,6 +6,15 @@ import type { Election } from '~types/api'
 import type { ElectionResultsView } from '~utils/ballotResults'
 import { KIND_COPY, provisionalSentence, readingSentence } from './resultsCopy'
 
+/** One figure when every question agrees on it, a range when they do not. */
+const span = (values: (number | undefined)[]): string | undefined => {
+  const known = values.filter((value): value is number => value !== undefined)
+  if (!known.length) return undefined
+  const low = Math.min(...known)
+  const high = Math.max(...known)
+  return low === high ? low.toLocaleString() : `${low.toLocaleString()}–${high.toLocaleString()}`
+}
+
 /**
  * How to read the numbers below — the panel that stops the tally being misread.
  *
@@ -23,8 +32,13 @@ export const ResultsSummary = ({
   encrypted: boolean
 }) => {
   const copy = KIND_COPY[results.kind]
-  const ballots = results.questions[0]?.ballots
-  const options = results.questions[0]?.choices.length
+  const questionCount = results.questions.length
+  // Only single-choice ever reaches this panel with more than one question, and its
+  // questions can carry different option counts. Reading either tile off question 1
+  // and labelling it as an election-wide fact is the kind of quiet mis-statement the
+  // rest of this page exists to avoid, so a varying figure is shown as a range.
+  const ballots = span(results.questions.map((question) => question.ballots))
+  const options = span(results.questions.map((question) => question.choices.length))
 
   return (
     <PageSection
@@ -49,8 +63,13 @@ export const ResultsSummary = ({
 
         {!results.raw && (
           <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
-            {ballots !== undefined && <StatTile label='Ballots counted' value={ballots.toLocaleString()} />}
-            {options !== undefined && <StatTile label='Options' value={options.toLocaleString()} />}
+            {questionCount > 1 && <StatTile label='Questions' value={questionCount.toLocaleString()} />}
+            {ballots !== undefined && (
+              <StatTile label='Ballots counted' value={ballots} help={questionCount > 1 ? 'Per question' : undefined} />
+            )}
+            {options !== undefined && (
+              <StatTile label='Options' value={options} help={questionCount > 1 ? 'Per question' : undefined} />
+            )}
             {results.kind === 'multichoice' && results.maxPicks !== undefined && (
               <StatTile
                 label='Picks allowed'

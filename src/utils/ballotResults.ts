@@ -264,8 +264,8 @@ const ballotsFromMatrix = (matrix: number[][]): number =>
 const soleLeader = (values: number[]): number => {
   const top = Math.max(...values, 0)
   if (top <= 0) return -1
-  const winners = values.reduce<number[]>((found, value, index) => (value === top ? [...found, index] : found), [])
-  return winners.length === 1 ? winners[0] : -1
+  const first = values.indexOf(top)
+  return values.indexOf(top, first + 1) === -1 ? first : -1
 }
 
 /**
