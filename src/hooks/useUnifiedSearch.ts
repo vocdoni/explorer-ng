@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { useApi } from '~contexts/ApiContext'
 import { fetchJson } from '~utils/http'
 

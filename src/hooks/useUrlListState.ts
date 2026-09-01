@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 
 /** The shape both the defaults and the resolved state take: every list-state
  *  value is stored as a string, since that is what a URL can carry. */

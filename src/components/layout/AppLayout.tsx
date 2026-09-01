@@ -1,7 +1,7 @@
 import { Box, Button, Flex, IconButton, Image, Link, Menu, Portal, Text } from '@chakra-ui/react'
 import { useState } from 'react'
 import { LuChevronDown, LuMenu } from 'react-icons/lu'
-import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom'
+import { Outlet, Link as RouterLink, useLocation } from 'react-router'
 import { GlobalSearch } from '~components/shared/GlobalSearch'
 import { SettingsPopover } from '~components/shared/SettingsPopover'
 import { ColorModeToggle } from '~components/ui/ColorModeToggle'

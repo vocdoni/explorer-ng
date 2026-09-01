@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Grid, Icon, Link, SimpleGrid, Spinner, Text } from '@chakra-ui/react'
 import { LuBoxes, LuCalendarClock, LuReceipt, LuScale, LuShieldCheck } from 'react-icons/lu'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { PageSection } from '~components/shared/PageSection'

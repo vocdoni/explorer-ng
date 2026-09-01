@@ -1,5 +1,5 @@
 import { Badge, Box, HStack, Link, Text, VStack } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { PageSection } from '~components/shared/PageSection'
 import { useElectionFees, useKeyRevealHeight } from '~hooks/useElectionAnalytics'
 import type { Election } from '~types/api'

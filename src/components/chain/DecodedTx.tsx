@@ -1,5 +1,5 @@
 import { Link, Text } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { DetailGrid, DetailRow } from '~components/shared/DetailGrid'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { StatusTag } from '~components/shared/StatusTag'

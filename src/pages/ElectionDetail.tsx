@@ -11,7 +11,7 @@ import {
   Text,
 } from '@chakra-ui/react'
 import { useMemo } from 'react'
-import { Link as RouterLink, useParams } from 'react-router-dom'
+import { Link as RouterLink, useParams } from 'react-router'
 import { BallotConfigCard } from '~components/election/BallotConfigCard'
 import { ElectionCostPanel } from '~components/election/ElectionCostPanel'
 import { LifecycleTimeline } from '~components/election/LifecycleTimeline'

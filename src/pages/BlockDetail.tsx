@@ -1,5 +1,5 @@
 import { Grid, Table, Tag } from '@chakra-ui/react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import { BlockNav } from '~components/chain/BlockNav'
 import { DetailGrid, DetailRow } from '~components/shared/DetailGrid'
 import { EmptyState } from '~components/shared/EmptyState'

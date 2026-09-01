@@ -1,6 +1,6 @@
 import { Button, Grid, HStack, Input, Link, NativeSelect, Skeleton, Spinner, Table, Text } from '@chakra-ui/react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { AddressAvatar } from '~components/account/AddressAvatar'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'

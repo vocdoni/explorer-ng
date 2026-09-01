@@ -1,5 +1,5 @@
 import { Grid, Link, Text } from '@chakra-ui/react'
-import { Link as RouterLink, useParams } from 'react-router-dom'
+import { Link as RouterLink, useParams } from 'react-router'
 import { DECODABLE_TX_TYPES, DecodedTx } from '~components/chain/DecodedTx'
 import { DetailGrid, DetailRow } from '~components/shared/DetailGrid'
 import { HashDisplay } from '~components/shared/HashDisplay'

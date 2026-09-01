@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import { normalizeId } from '~utils/format'
 
 /**

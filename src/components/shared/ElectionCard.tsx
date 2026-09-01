@@ -1,5 +1,5 @@
 import { Card, Flex, Heading, Link, Text } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { StatusTag } from '~components/shared/StatusTag'

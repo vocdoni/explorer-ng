@@ -10,7 +10,7 @@ import {
   LuUsers,
   LuVote,
 } from 'react-icons/lu'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { BlockTimeChart } from '~components/dashboard/BlockTimeChart'
 import { BreakdownDonut } from '~components/dashboard/BreakdownDonut'
 import { LatestBlocksFeed } from '~components/dashboard/LatestBlocksFeed'

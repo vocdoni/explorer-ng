@@ -1,6 +1,6 @@
 import { Button, Grid, Input, NativeSelect, Stack, Table } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { GoToInput } from '~components/chain/GoToInput'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'

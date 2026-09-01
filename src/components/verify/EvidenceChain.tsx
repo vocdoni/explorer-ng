@@ -1,7 +1,7 @@
 import { Box, Flex, Icon, Link, Spinner, Text } from '@chakra-ui/react'
 import { useState, type ReactNode } from 'react'
 import { LuCheck, LuChevronDown, LuChevronRight, LuTriangleAlert } from 'react-icons/lu'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { DetailGrid, DetailRow } from '~components/shared/DetailGrid'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { RelativeTime } from '~components/shared/RelativeTime'

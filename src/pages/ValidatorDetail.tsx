@@ -1,5 +1,5 @@
 import { Grid, Link, SimpleGrid, Table, Text } from '@chakra-ui/react'
-import { Link as RouterLink, useParams } from 'react-router-dom'
+import { Link as RouterLink, useParams } from 'react-router'
 import { ValidatorHealth } from '~components/chain/ValidatorHealth'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
