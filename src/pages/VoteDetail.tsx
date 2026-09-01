@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Grid, Icon, Link, SimpleGrid, Spinner, Text } from '@chakra-ui/react'
 import { LuBoxes, LuCalendarClock, LuReceipt, LuScale, LuShieldCheck } from 'react-icons/lu'
-import { Link as RouterLink, useParams } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { PageSection } from '~components/shared/PageSection'
@@ -11,6 +11,7 @@ import { OverwriteNotice } from '~components/verify/OverwriteNotice'
 import { BallotContents } from '~components/vote/BallotContents'
 import { VoteJourney } from '~components/vote/VoteJourney'
 import { VoteReceiptHero } from '~components/vote/VoteReceiptHero'
+import { useHashIds } from '~hooks/useHashIds'
 import { electionMetaFrom, useElectionWithMetadata, useVote } from '~hooks/useVoconeApi'
 import { useVoteContent } from '~hooks/useVoteContent'
 
@@ -25,7 +26,9 @@ const ENDED_STATUSES = ['ENDED', 'RESULTS', 'CANCELED']
  * decode a vote package on their own.
  */
 const VoteDetailPage = () => {
-  const { voteId = '' } = useParams()
+  // `/envelope#{voteId}`. The vote ID is a nullifier, so it rides in the
+  // fragment rather than the path — see `~hooks/useHashIds`.
+  const [voteId = ''] = useHashIds()
   const vote = useVote(voteId)
   const electionId = vote.data?.electionID
   const election = useElectionWithMetadata(electionId ?? '')
@@ -37,6 +40,29 @@ const VoteDetailPage = () => {
   const overwriteCount = vote.data?.overwriteCount ?? 0
   const blockHeight = vote.data?.blockHeight
   const electionStatus = election.data?.status ?? ''
+
+  // `/envelope` with nothing after the `#` — a truncated paste, or the route
+  // reached by hand. Nothing to look up, so point at the two pages that help.
+  if (!voteId) {
+    return (
+      <Box borderWidth='1px' borderColor='border' borderRadius='md'>
+        <EmptyState
+          icon={LuReceipt}
+          title='No vote ID in this link'
+          hint='A vote link ends in the 64-character ID of the ballot it shows. Browse the recent votes, or look yours up on the verify page.'
+        >
+          <Flex gap={2} mt={2}>
+            <Button asChild size='sm'>
+              <RouterLink to='/verify'>Verify a vote</RouterLink>
+            </Button>
+            <Button asChild size='sm' variant='outline'>
+              <RouterLink to='/envelopes'>Recent votes</RouterLink>
+            </Button>
+          </Flex>
+        </EmptyState>
+      </Box>
+    )
+  }
 
   if (vote.isLoading) {
     return (
@@ -56,7 +82,7 @@ const VoteDetailPage = () => {
           hint='The chain does not know this vote ID. Check for a missing character — vote IDs are 64 hex characters — or try the verify page, which searches every election.'
         >
           <Button asChild size='sm' mt={2}>
-            <RouterLink to={`/verify?vote=${voteId}`}>Try verifying it</RouterLink>
+            <RouterLink to={`/verify#${voteId}`}>Try verifying it</RouterLink>
           </Button>
         </EmptyState>
       </Box>
@@ -75,19 +101,19 @@ const VoteDetailPage = () => {
 
       <Flex gap={2} wrap='wrap'>
         <Button asChild size='sm'>
-          <RouterLink to={electionId ? `/verify/${electionId}/${voteId}` : `/verify?vote=${voteId}`}>
+          <RouterLink to={electionId ? `/verify#${electionId}/${voteId}` : `/verify#${voteId}`}>
             <LuShieldCheck />
             Verify this vote
           </RouterLink>
         </Button>
         {electionId && (
           <Button asChild size='sm' variant='outline'>
-            <RouterLink to={`/elections/${electionId}`}>Election</RouterLink>
+            <RouterLink to={`/process/${electionId}`}>Election</RouterLink>
           </Button>
         )}
         {blockHeight !== undefined && (
           <Button asChild size='sm' variant='outline'>
-            <RouterLink to={`/blocks/${blockHeight}`}>Block</RouterLink>
+            <RouterLink to={`/block/${blockHeight}`}>Block</RouterLink>
           </Button>
         )}
         {vote.data.txHash && (
@@ -135,7 +161,7 @@ const VoteDetailPage = () => {
           value={
             blockHeight !== undefined ? (
               <Link asChild variant='plain'>
-                <RouterLink to={`/blocks/${blockHeight}`}>{blockHeight.toLocaleString()}</RouterLink>
+                <RouterLink to={`/block/${blockHeight}`}>{blockHeight.toLocaleString()}</RouterLink>
               </Link>
             ) : (
               '—'

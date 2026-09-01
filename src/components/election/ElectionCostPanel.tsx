@@ -62,7 +62,7 @@ export const ElectionCostPanel = ({ electionId, page, onPageChange }: Props) => 
                 <Table.Cell textAlign='end'>{fee.cost.toLocaleString()}</Table.Cell>
                 <Table.Cell>
                   <Link asChild variant='plain'>
-                    <RouterLink to={`/blocks/${fee.height}`}>{fee.height.toLocaleString()}</RouterLink>
+                    <RouterLink to={`/block/${fee.height}`}>{fee.height.toLocaleString()}</RouterLink>
                   </Link>
                 </Table.Cell>
                 <Table.Cell>

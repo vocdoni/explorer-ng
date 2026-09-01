@@ -51,7 +51,7 @@ const BlocksPage = () => {
           <GoToInput
             placeholder='Go to height'
             buttonLabel='Go'
-            toPath={(v) => `/blocks/${v}`}
+            toPath={(v) => `/block/${v}`}
             validate={(v) => /^[0-9]+$/.test(v)}
           />
         }
@@ -108,7 +108,7 @@ const BlocksPage = () => {
                 <Table.Row key={b.hash}>
                   <Table.Cell>
                     <Button asChild variant='link' size='sm'>
-                      <RouterLink to={`/blocks/${b.height}`}>{b.height}</RouterLink>
+                      <RouterLink to={`/block/${b.height}`}>{b.height}</RouterLink>
                     </Button>
                   </Table.Cell>
                   <Table.Cell>

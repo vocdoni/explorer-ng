@@ -1,58 +1,48 @@
 import { Box, Button, Flex, Grid, Icon, Input, Stack, Text } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 import { LuCircleCheck, LuTriangleAlert } from 'react-icons/lu'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { EvidenceChain } from '~components/verify/EvidenceChain'
 import { OverwriteNotice } from '~components/verify/OverwriteNotice'
 import { ProofActions } from '~components/verify/ProofActions'
-import { normalizeId, useVerification } from '~hooks/useVerification'
+import { useHashIds } from '~hooks/useHashIds'
+import { useVerification } from '~hooks/useVerification'
+import { normalizeId } from '~utils/format'
 
 const VerifyVotePage = () => {
-  const params = useParams()
-  const [search] = useSearchParams()
   const navigate = useNavigate()
-  // The vote ID is the only thing a voter is ever asked for. It arrives three
-  // ways: `/verify/{voteId}` (the explorer.vote-compatible short form), the
-  // legacy `/verify/{electionId}/{voteId}` permalink printed in older proofs,
-  // and `?vote=` from the dashboard hero. The election, when not in the URL, is
+  // The vote ID is the only thing a voter is ever asked for, and it never
+  // touches the path: `/verify#{voteId}`, or `/verify#{electionId}/{voteId}` for
+  // the permalink older proofs print. It is a nullifier, so it stays in the
+  // fragment where no server sees it. The election, when the URL omits it, is
   // resolved from `GET /votes/{id}`.
-  const queryVoteId = search.get('vote') ?? undefined
-  const initialVoteId = params.voteId ?? queryVoteId ?? ''
+  const [first, second] = useHashIds()
+  const hashElectionId = second ? first : ''
+  const hashVoteId = second ?? first ?? ''
 
-  const [form, setForm] = useState(initialVoteId)
+  const [form, setForm] = useState(hashVoteId)
   // What we are actually verifying, as opposed to what is currently typed.
-  const [target, setTarget] = useState({
-    electionId: normalizeId(params.electionId),
-    voteId: normalizeId(initialVoteId),
-  })
+  const [target, setTarget] = useState({ electionId: hashElectionId, voteId: hashVoteId })
 
   // Arriving by link (or navigating between permalinks) verifies immediately —
   // a voter who followed a receipt link should never have to press a button.
+  // The sync is unconditional: navigating to a bare `/verify` (the header link,
+  // say) must clear the previous verification too, or the page keeps showing a
+  // result its own URL no longer names.
   useEffect(() => {
-    const incoming = params.voteId ?? queryVoteId
-    if (!incoming) return
-    setForm(incoming)
-    setTarget({ electionId: normalizeId(params.electionId), voteId: normalizeId(incoming) })
-  }, [params.electionId, params.voteId, queryVoteId])
+    setForm(hashVoteId)
+    setTarget({ electionId: hashElectionId, voteId: hashVoteId })
+  }, [hashElectionId, hashVoteId])
 
   const verification = useVerification(target.electionId, target.voteId)
-  const { electionId, voteId, verify, vote, chain, complete, pending } = verification
-
-  // A `?vote=` arrival becomes the canonical short permalink once it verifies.
-  // Two-segment URLs are left alone: rewriting them would break the back button
-  // for proofs already in circulation.
-  useEffect(() => {
-    if (!voteId || !queryVoteId || params.voteId) return
-    if (!verify.isSuccess) return
-    navigate(`/verify/${voteId}`, { replace: true })
-  }, [voteId, queryVoteId, params.voteId, verify.isSuccess, navigate])
+  const { electionId, verify, vote, chain, complete, pending } = verification
 
   const submit = () => {
     const next = normalizeId(form)
     if (!next) return
-    navigate(`/verify/${next}`)
+    navigate(`/verify#${next}`)
   }
 
   // A vote ID with no election attached is a dead end in the same way a 404 on

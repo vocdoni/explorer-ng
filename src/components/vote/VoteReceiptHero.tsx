@@ -68,7 +68,7 @@ export const VoteReceiptHero = ({ voteId, electionId, electionTitle, date, block
             A ballot for{' '}
             {electionId ? (
               <Link asChild variant='plain' fontWeight='bold'>
-                <RouterLink to={`/elections/${electionId}`}>{election}</RouterLink>
+                <RouterLink to={`/process/${electionId}`}>{election}</RouterLink>
               </Link>
             ) : (
               <Text as='span' fontWeight='bold'>
@@ -82,7 +82,7 @@ export const VoteReceiptHero = ({ voteId, electionId, electionTitle, date, block
                 {' '}
                 and written into block{' '}
                 <Link asChild variant='plain' fontWeight='bold'>
-                  <RouterLink to={`/blocks/${blockHeight}`}>{blockHeight.toLocaleString()}</RouterLink>
+                  <RouterLink to={`/block/${blockHeight}`}>{blockHeight.toLocaleString()}</RouterLink>
                 </Link>
               </>
             )}

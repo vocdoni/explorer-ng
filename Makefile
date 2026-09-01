@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install dev build lint preview docker-build docker-up docker-down docker-logs
+.PHONY: install dev build lint test preview docker-build docker-up docker-down docker-logs
 
 install:
 	pnpm install --frozen-lockfile
@@ -13,6 +13,9 @@ build:
 
 lint:
 	pnpm lint
+
+test:
+	pnpm test
 
 preview:
 	pnpm preview

@@ -116,7 +116,7 @@ export const LifecycleTimeline = ({ electionId, election, encrypted, creationHei
                 {step.date && <Text>{formatDate(step.date.toISOString())}</Text>}
                 {step.height !== undefined && (
                   <Link asChild variant='plain'>
-                    <RouterLink to={`/blocks/${step.height}`}>block {step.height.toLocaleString()}</RouterLink>
+                    <RouterLink to={`/block/${step.height}`}>block {step.height.toLocaleString()}</RouterLink>
                   </Link>
                 )}
                 {step.detail && <Text>{step.detail}</Text>}

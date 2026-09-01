@@ -20,7 +20,7 @@ export const ElectionListRow = ({ election, title }: Props) => (
   <Table.Row>
     <Table.Cell minW='0'>
       <Link asChild variant='unstyled'>
-        <RouterLink to={`/elections/${election.electionId}`}>
+        <RouterLink to={`/process/${election.electionId}`}>
           <Text fontWeight='semibold' wordBreak='break-word'>
             {title || shortHex(election.electionId, 12, 8)}
           </Text>

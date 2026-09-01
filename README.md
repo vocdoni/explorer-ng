@@ -34,8 +34,35 @@ with time-series charts, plus a monitoring view covering validator status and ru
 
 ## Stack
 
-React 18, TypeScript, Vite 5, Chakra UI v3, TanStack Query, React Router (hash routing), Recharts,
+React 18, TypeScript, Vite 5, Chakra UI v3, TanStack Query, React Router (path routing), Recharts,
 `@react-pdf/renderer`, TweetNaCl.
+
+## URLs
+
+The paths are the ones the previous explorer published — `/process/{id}`, `/account/{address}`,
+`/blocks`, `/validator/{address}` — adopted verbatim so that links already in circulation resolve
+here without a redirect. That is why the URLs speak the protocol's vocabulary while the interface
+speaks the voter's. List state (page, filters, active tab) lives in search params, which the old
+`/blocks/{page}` style path could not express alongside filters.
+
+Two identifiers sit after a `#` instead:
+
+```
+/verify#{voteId}                  /verify#{electionId}/{voteId}
+/envelope#{voteId}
+```
+
+A vote ID is a nullifier — the value tying a person to their ballot receipt — and the fragment is
+the one part of a URL a browser never transmits. Putting it in the path, as the old explorer did,
+wrote it into every access log, proxy trace and `Referer` header between the voter and the site.
+This is also the link printed into proof PDFs and encoded in their QR codes.
+
+Everything that could not be kept is rewritten client-side, before the router mounts, by
+`src/utils/legacyUrl.ts` — the pre-1.0 `/processes/show/#/{id}` forms, the old list pagination
+(`/blocks/3` → `/blocks?page=2`), `/transactions/id/{hash}`, and this app's own earlier
+hash-router links (`/#/elections/{id}`). That file is one pure function and is the single place
+the mapping lives. Note that a client-side rewrite cannot un-log the first request for a legacy
+`/verify/{nullifier}` link; only links issued from here on carry the guarantee above.
 
 ## Quickstart
 
@@ -117,9 +144,14 @@ pnpm install --frozen-lockfile
 pnpm build             # writes dist/
 ```
 
-Serve `dist/` from nginx, Caddy, S3/CloudFront, GitHub Pages, or any static host. The application
-uses hash routing (`/#/elections/…`), so no URL-rewrite rules are needed. Two deployment notes:
+Serve `dist/` from nginx, Caddy, S3/CloudFront, or any static host that can serve the site at the
+domain root. Three deployment notes:
 
+- The app uses path routing and links everything from `/`, so it must be served at the root of its
+  (sub)domain — a subpath deployment such as a GitHub Pages project site (`user.github.io/repo/`)
+  will not resolve — and the host must answer every unknown path with `index.html` at status 200.
+  `public/_redirects` covers Netlify (Vite copies it into `dist/`) and `docker/nginx/default.conf`
+  does it with `try_files`; any other host needs the equivalent rule.
 - Send `Cache-Control: no-store` for `index.html` and `runtime-config.js`; everything under
   `/assets` is content-hashed and can be cached indefinitely. `docker/nginx/default.conf` is a
   working reference.
@@ -143,9 +175,16 @@ pnpm dev           # dev server on :3000
 pnpm build         # chakra typegen + vite build -> dist/
 pnpm preview       # serve the production build on :4173
 pnpm lint          # tsc --noEmit + eslint, zero warnings tolerated
+pnpm test          # vitest, single run
+pnpm test:watch    # vitest, watching
 ```
 
-Equivalent `make` targets exist: `install`, `dev`, `build`, `lint`, `preview`, `docker-build`,
+Tests cover `src/utils/legacyUrl.ts` — the redirect table described under [URLs](#urls). Nothing in
+the app links to the URLs it handles, so a wrong answer there is invisible until someone follows an
+old link; the cases are pinned one by one instead. CI runs `pnpm lint` and `pnpm test` before the
+build, so a pull request that breaks either fails its check rather than shipping a deploy preview.
+
+Equivalent `make` targets exist: `install`, `dev`, `build`, `lint`, `test`, `preview`, `docker-build`,
 `docker-up`, `docker-down`, `docker-logs`.
 
 Code style is enforced by ESLint and Prettier conventions: no semicolons, single quotes, 120-column

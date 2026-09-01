@@ -1,4 +1,11 @@
 /**
+ * Identifiers arrive from QR scans, receipt e-mails and hand typing, so they
+ * turn up with `0x` prefixes, stray whitespace and mixed case. The API only
+ * accepts bare lowercase hex.
+ */
+export const normalizeId = (raw?: string) => (raw ?? '').trim().replace(/^0x/i, '').toLowerCase()
+
+/**
  * Abbreviate a long hex identifier for display, e.g.
  * "a8f7d95dd0de…9067ce37". Returns the value untouched when it is already
  * shorter than the requested window, so short ids are never padded or elided.

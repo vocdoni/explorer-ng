@@ -115,7 +115,7 @@ export const EvidenceChain = ({ verification }: { verification: Verification }) 
           </Text>
           <DetailGrid columns={{ base: 1, sm: 2 }} gap={4}>
             <DetailRow label='Vote ID'>
-              <HashDisplay value={voteId} copyLabel='Vote ID' full to={`/votes/${voteId}`} />
+              <HashDisplay value={voteId} copyLabel='Vote ID' full to={`/envelope#${voteId}`} />
             </DetailRow>
             <DetailRow label='Endpoint used'>
               <Text fontFamily='mono' fontSize='xs' wordBreak='break-all' fontWeight='normal'>
@@ -138,9 +138,13 @@ export const EvidenceChain = ({ verification }: { verification: Verification }) 
       ) : (
         <DetailGrid columns={{ base: 1, sm: 2 }} gap={4}>
           <DetailRow label='Block'>
-            <Link asChild variant='plain'>
-              <RouterLink to={`/blocks/${blockHeight ?? ''}`}>{(blockHeight ?? 0).toLocaleString()}</RouterLink>
-            </Link>
+            {blockHeight !== undefined ? (
+              <Link asChild variant='plain'>
+                <RouterLink to={`/block/${blockHeight}`}>{blockHeight.toLocaleString()}</RouterLink>
+              </Link>
+            ) : (
+              '—'
+            )}
           </DetailRow>
           <DetailRow label='Transaction'>
             {vote.data?.txHash ? (
@@ -197,7 +201,7 @@ export const EvidenceChain = ({ verification }: { verification: Verification }) 
         <DetailGrid columns={{ base: 1, sm: 2 }} gap={4}>
           <DetailRow label='Election'>
             <Link asChild variant='plain'>
-              <RouterLink to={`/elections/${electionId}`}>{electionTitle}</RouterLink>
+              <RouterLink to={`/process/${electionId}`}>{electionTitle}</RouterLink>
             </Link>
           </DetailRow>
           <DetailRow label='Election ID'>

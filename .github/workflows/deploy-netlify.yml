@@ -55,6 +55,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Ahead of the build so a PR that breaks types or the legacy-URL redirect
+      # table fails its check rather than shipping a green deploy preview.
+      - name: Lint and typecheck
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
       - name: Build project
         run: pnpm build
         env:

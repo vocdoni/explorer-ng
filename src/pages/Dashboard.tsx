@@ -201,7 +201,7 @@ const DashboardPage = () => {
             subtitle='Where every election sits in its lifecycle.'
             breakdown={electionStatus}
             unit='elections'
-            right={<SeeAll to='/elections'>See all</SeeAll>}
+            right={<SeeAll to='/processes'>See all</SeeAll>}
           />
         </GridItem>
       </SimpleGrid>
@@ -219,7 +219,7 @@ const DashboardPage = () => {
           <PageSection
             title='Recent elections'
             subtitle='The latest elections created on the chain.'
-            right={<SeeAll to='/elections'>See all</SeeAll>}
+            right={<SeeAll to='/processes'>See all</SeeAll>}
             minH={PANEL_MIN_H}
           >
             <RecentElectionsList elections={electionRows} titles={titles} isLoading={elections.isLoading} />
@@ -230,7 +230,7 @@ const DashboardPage = () => {
           <PageSection
             title='Recent votes'
             subtitle='Latest votes cast, across every election.'
-            right={<SeeAll to='/votes'>See all</SeeAll>}
+            right={<SeeAll to='/envelopes'>See all</SeeAll>}
             minH={PANEL_MIN_H}
           >
             <Table.ScrollArea>
@@ -247,13 +247,13 @@ const DashboardPage = () => {
                   {voteRows.map((v) => (
                     <Table.Row key={v.voteID}>
                       <Table.Cell>
-                        <HashDisplay value={v.voteID} copyLabel='Vote ID' to={`/votes/${v.voteID}`} left={6} right={4} />
+                        <HashDisplay value={v.voteID} copyLabel='Vote ID' to={`/envelope#${v.voteID}`} left={6} right={4} />
                       </Table.Cell>
                       <Table.Cell>
                         <HashDisplay
                           value={v.electionID}
                           copyLabel='Election ID'
-                          to={`/elections/${v.electionID}`}
+                          to={`/process/${v.electionID}`}
                           left={6}
                           right={4}
                         />
@@ -336,7 +336,7 @@ const DashboardPage = () => {
           <PageSection
             title='Top organizations'
             subtitle='Ranked by number of elections created.'
-            right={<SeeAll to='/organizations'>See all</SeeAll>}
+            right={<SeeAll to='/accounts'>See all</SeeAll>}
             minH={PANEL_MIN_H}
           >
             <Table.ScrollArea>
@@ -354,7 +354,7 @@ const DashboardPage = () => {
                         <HashDisplay
                           value={o.organizationID}
                           copyLabel='Organization ID'
-                          to={`/organizations/${o.organizationID}`}
+                          to={`/account/${o.organizationID}`}
                           left={6}
                           right={4}
                         />

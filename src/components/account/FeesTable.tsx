@@ -39,7 +39,7 @@ export const FeesTable = ({ address }: Props) => {
                 <Table.Cell textAlign='end'>{f.cost.toLocaleString()}</Table.Cell>
                 <Table.Cell>
                   <Link asChild variant='plain'>
-                    <RouterLink to={`/blocks/${f.height}`}>{f.height.toLocaleString()}</RouterLink>
+                    <RouterLink to={`/block/${f.height}`}>{f.height.toLocaleString()}</RouterLink>
                   </Link>
                 </Table.Cell>
                 <Table.Cell>

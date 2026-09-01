@@ -51,7 +51,7 @@ export const LatestBlocksFeed = ({ blocks, validators, isLoading }: Props) => {
               <Table.Row key={b.hash}>
                 <Table.Cell>
                   <Link asChild variant='plain'>
-                    <RouterLink to={`/blocks/${b.height}`}>
+                    <RouterLink to={`/block/${b.height}`}>
                       <Text as='span' fontSize='sm'>
                         {b.height.toLocaleString()}
                       </Text>
@@ -61,7 +61,7 @@ export const LatestBlocksFeed = ({ blocks, validators, isLoading }: Props) => {
                 <Table.Cell maxW='180px'>
                   {validator ? (
                     <Link asChild variant='plain'>
-                      <RouterLink to={`/validators/${validator.address}`}>
+                      <RouterLink to={`/validator/${validator.address}`}>
                         <Text as='span' fontSize='sm' truncate title={validator.name}>
                           {validator.name || 'Validator'}
                         </Text>

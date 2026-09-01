@@ -54,7 +54,7 @@ const ValidatorDetailPage = () => {
             label='Joined at block'
             value={
               <Link asChild variant='plain'>
-                <RouterLink to={`/blocks/${validator.joinHeight}`}>{validator.joinHeight.toLocaleString()}</RouterLink>
+                <RouterLink to={`/block/${validator.joinHeight}`}>{validator.joinHeight.toLocaleString()}</RouterLink>
               </Link>
             }
             help='The block height at which this validator entered the active set.'
@@ -79,7 +79,7 @@ const ValidatorDetailPage = () => {
                     <Table.Row key={b.hash}>
                       <Table.Cell>
                         <Link asChild variant='plain'>
-                          <RouterLink to={`/blocks/${b.height}`}>{b.height}</RouterLink>
+                          <RouterLink to={`/block/${b.height}`}>{b.height}</RouterLink>
                         </Link>
                       </Table.Cell>
                       <Table.Cell>

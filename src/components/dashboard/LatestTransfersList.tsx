@@ -35,10 +35,10 @@ export const LatestTransfersList = ({ transfers, isLoading }: Props) => {
           {transfers.map((t, i) => (
             <Table.Row key={`${t.txHash}-${i}`}>
               <Table.Cell>
-                <HashDisplay value={t.from} copyLabel='Account address' to={`/accounts/${t.from}`} left={6} right={4} />
+                <HashDisplay value={t.from} copyLabel='Account address' to={`/account/${t.from}`} left={6} right={4} />
               </Table.Cell>
               <Table.Cell>
-                <HashDisplay value={t.to} copyLabel='Account address' to={`/accounts/${t.to}`} left={6} right={4} />
+                <HashDisplay value={t.to} copyLabel='Account address' to={`/account/${t.to}`} left={6} right={4} />
               </Table.Cell>
               <Table.Cell textAlign='end'>{t.amount.toLocaleString()} tokens</Table.Cell>
               <Table.Cell>

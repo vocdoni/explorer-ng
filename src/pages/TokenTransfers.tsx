@@ -97,15 +97,15 @@ const TokenTransfersPage = () => {
                     {rows.map((t, i) => (
                       <Table.Row key={`${t.txHash}-${i}`}>
                         <Table.Cell>
-                          <HashDisplay value={t.from} copyLabel='From account' to={`/accounts/${t.from}`} />
+                          <HashDisplay value={t.from} copyLabel='From account' to={`/account/${t.from}`} />
                         </Table.Cell>
                         <Table.Cell>
-                          <HashDisplay value={t.to} copyLabel='To account' to={`/accounts/${t.to}`} />
+                          <HashDisplay value={t.to} copyLabel='To account' to={`/account/${t.to}`} />
                         </Table.Cell>
                         <Table.Cell textAlign='end'>{t.amount.toLocaleString()}</Table.Cell>
                         <Table.Cell>
                           <Link asChild variant='plain'>
-                            <RouterLink to={`/blocks/${t.height}`}>{t.height}</RouterLink>
+                            <RouterLink to={`/block/${t.height}`}>{t.height}</RouterLink>
                           </Link>
                         </Table.Cell>
                         <Table.Cell>
@@ -158,7 +158,7 @@ const TokenTransfersPage = () => {
                           </Text>
                         </Table.Cell>
                         <Table.Cell>
-                          <HashDisplay value={a.address} copyLabel='Account address' to={`/accounts/${a.address}`} />
+                          <HashDisplay value={a.address} copyLabel='Account address' to={`/account/${a.address}`} />
                         </Table.Cell>
                         <Table.Cell textAlign='end'>{a.balance.toLocaleString()}</Table.Cell>
                         <Table.Cell textAlign='end'>{a.nonce.toLocaleString()}</Table.Cell>

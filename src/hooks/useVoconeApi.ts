@@ -387,6 +387,20 @@ export const useTransaction = (hash: string) => {
   })
 }
 
+/** `GET /chain/transactions/{height}/{index}` — the transaction sitting at a
+ *  position in a block. A missing index answers 204 with an empty body, which
+ *  `fetchJson` maps to `{}` — an object without `txInfo`, not an error. The
+ *  block is sealed, so the answer can never change and is never polled. */
+export const useTransactionByIndex = (height: string, index: string) => {
+  const { apiUrl } = useApi()
+  return useQuery({
+    queryKey: ['transaction-by-index', apiUrl, height, index],
+    queryFn: () => fetchJson<Partial<GenericTransactionWithInfo>>(q(apiUrl, `/chain/transactions/${height}/${index}`)),
+    enabled: !!height && !!index,
+    staleTime: Infinity,
+  })
+}
+
 export const useTransactionRef = (hash: string) => {
   const { apiUrl, refreshMs } = useApi()
   return useQuery({

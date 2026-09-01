@@ -24,12 +24,12 @@ export const BlockNav = ({ height, minHeight, maxHeight }: Props) => {
   return (
     <HStack gap={2}>
       <Button asChild size='sm' variant='outline' disabled={!canPrev}>
-        <RouterLink to={canPrev ? `/blocks/${height - 1}` : '#'} aria-disabled={!canPrev}>
+        <RouterLink to={canPrev ? `/block/${height - 1}` : '#'} aria-disabled={!canPrev}>
           <LuChevronLeft /> Previous block
         </RouterLink>
       </Button>
       <Button asChild size='sm' variant='outline' disabled={!canNext}>
-        <RouterLink to={canNext ? `/blocks/${height + 1}` : '#'} aria-disabled={!canNext}>
+        <RouterLink to={canNext ? `/block/${height + 1}` : '#'} aria-disabled={!canNext}>
           Next block <LuChevronRight />
         </RouterLink>
       </Button>

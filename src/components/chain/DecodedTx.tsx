@@ -86,7 +86,7 @@ const humanizeTxtype = (txtype?: string) => {
 const ElectionLink = ({ processId }: { processId?: string }) =>
   processId ? (
     <Link asChild variant='plain'>
-      <RouterLink to={`/elections/${processId}`}>
+      <RouterLink to={`/process/${processId}`}>
         <HashDisplay value={processId} copyLabel='Election ID' withCopy={false} />
       </RouterLink>
     </Link>
@@ -97,7 +97,7 @@ const ElectionLink = ({ processId }: { processId?: string }) =>
 const AccountLink = ({ address, copyLabel }: { address?: string; copyLabel: string }) =>
   address ? (
     <Link asChild variant='plain'>
-      <RouterLink to={`/accounts/${address}`}>
+      <RouterLink to={`/account/${address}`}>
         <HashDisplay value={address} copyLabel={copyLabel} withCopy={false} />
       </RouterLink>
     </Link>

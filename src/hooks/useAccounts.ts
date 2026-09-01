@@ -51,16 +51,10 @@ export interface PriceFactors {
   factors: Record<string, number>
 }
 
-/** `GET /accounts/{address}` — an account's balance, nonce and aggregate counters. */
-export const useAccount = (address: string) => {
-  const { apiUrl, refreshMs } = useApi()
-  return useQuery({
-    queryKey: ['account', apiUrl, address],
-    queryFn: () => fetchJson<Account>(q(apiUrl, `/accounts/${address}`)),
-    enabled: !!address,
-    refetchInterval: refreshMs,
-  })
-}
+// `GET /accounts/{address}` itself lives in `~hooks/useVoconeApi` as
+// `useOrganization`. It used to have a twin here, back when the account view and
+// the organization view were separate pages; one endpoint behind two query keys
+// meant the same response cached twice.
 
 /** `GET /accounts/{address}/transfers/page/{page}` — paginated token transfers
  *  in and out of this account. */

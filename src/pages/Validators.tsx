@@ -37,11 +37,11 @@ const ValidatorsPage = () => {
                 <Table.Row key={v.validatorAddress}>
                   <Table.Cell>
                     <Link asChild variant='plain'>
-                      <RouterLink to={`/validators/${v.address}`}>{v.name || 'Unnamed validator'}</RouterLink>
+                      <RouterLink to={`/validator/${v.address}`}>{v.name || 'Unnamed validator'}</RouterLink>
                     </Link>
                   </Table.Cell>
                   <Table.Cell>
-                    <HashDisplay value={v.address} copyLabel='Validator address' to={`/validators/${v.address}`} />
+                    <HashDisplay value={v.address} copyLabel='Validator address' to={`/validator/${v.address}`} />
                   </Table.Cell>
                   <Table.Cell textAlign='end'>{v.power.toLocaleString()}</Table.Cell>
                   <Table.Cell textAlign='end'>{v.proposals.toLocaleString()}</Table.Cell>
