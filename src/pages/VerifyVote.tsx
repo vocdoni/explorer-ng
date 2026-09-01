@@ -28,8 +28,10 @@ const VerifyVotePage = () => {
 
   // Arriving by link (or navigating between permalinks) verifies immediately —
   // a voter who followed a receipt link should never have to press a button.
+  // The sync is unconditional: navigating to a bare `/verify` (the header link,
+  // say) must clear the previous verification too, or the page keeps showing a
+  // result its own URL no longer names.
   useEffect(() => {
-    if (!hashVoteId) return
     setForm(hashVoteId)
     setTarget({ electionId: hashElectionId, voteId: hashVoteId })
   }, [hashElectionId, hashVoteId])

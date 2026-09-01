@@ -41,7 +41,10 @@ const AccountDetailPage = () => {
   // decided before the account loads. Selecting nothing in the meantime beats
   // guessing: `lazyMount` means an unselected tab fetches nothing, so a wrong
   // guess would cost both a wasted request and a visible jump.
-  const tab = state.tab || (org.isLoading ? '' : isOrganization ? 'elections' : 'transfers')
+  // A `?tab=elections` link carried to an address that has none would name a
+  // tab that is not rendered, selecting nothing — fall through to the default.
+  const requested = state.tab === 'elections' && !org.isLoading && !isOrganization ? '' : state.tab
+  const tab = requested || (org.isLoading ? '' : isOrganization ? 'elections' : 'transfers')
 
   const subtitle =
     org.meta.description ||

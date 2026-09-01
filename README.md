@@ -144,12 +144,14 @@ pnpm install --frozen-lockfile
 pnpm build             # writes dist/
 ```
 
-Serve `dist/` from nginx, Caddy, S3/CloudFront, GitHub Pages, or any static host. Three deployment
-notes:
+Serve `dist/` from nginx, Caddy, S3/CloudFront, or any static host that can serve the site at the
+domain root. Three deployment notes:
 
-- The app uses path routing, so the host must answer every unknown path with `index.html` at
-  status 200. `public/_redirects` covers Netlify (Vite copies it into `dist/`) and
-  `docker/nginx/default.conf` does it with `try_files`; any other host needs the equivalent rule.
+- The app uses path routing and links everything from `/`, so it must be served at the root of its
+  (sub)domain — a subpath deployment such as a GitHub Pages project site (`user.github.io/repo/`)
+  will not resolve — and the host must answer every unknown path with `index.html` at status 200.
+  `public/_redirects` covers Netlify (Vite copies it into `dist/`) and `docker/nginx/default.conf`
+  does it with `try_files`; any other host needs the equivalent rule.
 - Send `Cache-Control: no-store` for `index.html` and `runtime-config.js`; everything under
   `/assets` is content-hashed and can be cached indefinitely. `docker/nginx/default.conf` is a
   working reference.

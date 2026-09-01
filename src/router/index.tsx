@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppLayout } from '~components/layout/AppLayout'
-import { applyLegacyUrl } from '~utils/legacyUrl'
+import { applyLegacyUrl, resolveLegacyUrl } from '~utils/legacyUrl'
 
 const Dashboard = lazy(() => import('~pages/Dashboard'))
 const Elections = lazy(() => import('~pages/Elections'))
@@ -94,5 +94,15 @@ const router = createBrowserRouter([
     ],
   },
 ])
+
+// A legacy link pasted over an already-open tab can differ from the current URL
+// only in its fragment (`https://host/#/process/<id>` over `/`). The browser
+// treats that as a same-document navigation — no reload, so the rewrite above
+// never re-runs — and the router would keep rendering the current page as if
+// nothing happened. `hashchange` is the one event that always fires for it.
+window.addEventListener('hashchange', () => {
+  const resolved = resolveLegacyUrl(window.location.pathname + window.location.search + window.location.hash)
+  if (resolved) void router.navigate(resolved, { replace: true })
+})
 
 export const Router = () => <RouterProvider router={router} />

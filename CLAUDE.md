@@ -9,14 +9,17 @@ pnpm install       # runs postinstall -> chakra typegen (required before lint/bu
 pnpm dev           # vite dev server on :3000
 pnpm build         # chakra typegen + vite build -> dist/
 pnpm lint          # tsc --noEmit + eslint, --max-warnings 0
+pnpm test          # vitest, single run
 pnpm preview       # serve the production build on :4173
 ```
 
 Equivalent `make` targets exist (`install`, `dev`, `build`, `lint`, `preview`, `docker-*`).
 
-There is **no test suite** — no test runner, no test files, no `pnpm test`. `pnpm lint` (type-check +
-ESLint at zero warnings) is the only automated gate, and **nothing runs it for you**: the Netlify
-workflow only runs `pnpm build`, and `vite build` does not type-check. Run it locally before pushing.
+The test suite is vitest and deliberately small: it covers `src/utils/legacyUrl.ts` — the legacy-URL
+redirect table, which nothing in the app links to and whose failures are invisible until someone
+follows an old link — and nothing else. `pnpm lint` (type-check + ESLint at zero warnings) is the
+other automated gate. The Netlify workflow runs `pnpm lint` and `pnpm test` before `pnpm build`
+(`vite build` itself does not type-check), so run both locally before pushing.
 
 `chakra typegen ./src/theme/system.ts` generates the Chakra UI type map into `node_modules`; it is not
 committed. Re-run it (`pnpm chakra:typegen`) after changing anything under `src/theme/` — recipe
@@ -160,9 +163,15 @@ evidence chain renders its own spinner and its own failure, so a gateway that ca
 
 ### Routing and pages
 
-Hash router (`createHashRouter`) with lazy-loaded pages, so static hosts need no rewrite rules. Every
-page is a default export under `src/pages/`, mounted inside `AppLayout`. `/verify/:voteId` (without an
-election ID) is an explorer.vote-compatible short form — the election is resolved from the vote.
+Path router (`createBrowserRouter`) with lazy-loaded pages; every host must answer unknown paths with
+`index.html` (`public/_redirects` covers Netlify, `try_files` in `docker/nginx/default.conf` covers the
+container). The paths are the ones `vocdoni/explorer` published (`/process/:electionId`,
+`/account/:address`, `/block/:height`), and every legacy form that could not be adopted is rewritten
+before the router snapshots `window.location` by `src/utils/legacyUrl.ts` — the single place the
+mapping lives, pinned case-by-case by its vitest suite. Every page is a default export under
+`src/pages/`, mounted inside `AppLayout`. Vote nullifiers never ride in the path: `/verify#<voteId>`
+(or `/verify#<electionId>/<voteId>`) and `/envelope#<voteId>` carry them in the URL fragment, which
+browsers never transmit, and `useHashIds` reads them.
 
 `useUnifiedSearch` resolves any pasted identifier to a route. Shape alone is ambiguous at 64 hex chars
 (election, nullifier, tx hash, block hash all match), so it probes the API in order of search frequency;
