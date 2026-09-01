@@ -1,7 +1,7 @@
 import { Box, Button, Flex, Heading, Icon, Input, Text } from '@chakra-ui/react'
 import { useState } from 'react'
 import { LuShieldCheck } from 'react-icons/lu'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { normalizeId } from '~utils/format'
 
 /**

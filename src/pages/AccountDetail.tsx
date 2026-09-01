@@ -1,5 +1,5 @@
 import { Button, Flex, Grid, Link, SimpleGrid, Table, Tabs, Text } from '@chakra-ui/react'
-import { Link as RouterLink, useParams } from 'react-router-dom'
+import { Link as RouterLink, useParams } from 'react-router'
 import { AddressAvatar } from '~components/account/AddressAvatar'
 import { FeesTable } from '~components/account/FeesTable'
 import { TransfersTable } from '~components/account/TransfersTable'

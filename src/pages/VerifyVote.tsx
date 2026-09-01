@@ -1,7 +1,7 @@
 import { Box, Button, Flex, Grid, Icon, Input, Stack, Text } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 import { LuCircleCheck, LuTriangleAlert } from 'react-icons/lu'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { EvidenceChain } from '~components/verify/EvidenceChain'

@@ -1,6 +1,6 @@
 import { Grid, Input, Link, SimpleGrid, Table, Tabs, Text } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { LuCoins, LuUsers } from 'react-icons/lu'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'

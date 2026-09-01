@@ -1,5 +1,5 @@
 import { Button, HStack } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu'
 
 interface Props {

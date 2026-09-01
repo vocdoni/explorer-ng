@@ -1,5 +1,5 @@
 import { HStack, Link, Table, Text } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { txCostLabel } from '~components/account/txCostLabels'
 import { EmptyState } from '~components/shared/EmptyState'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'

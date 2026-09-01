@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router'
+import { RouterProvider } from 'react-router/dom'
 import { AppLayout } from '~components/layout/AppLayout'
 import { applyLegacyUrl, resolveLegacyUrl } from '~utils/legacyUrl'
 

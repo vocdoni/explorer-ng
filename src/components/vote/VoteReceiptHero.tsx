@@ -1,6 +1,6 @@
 import { Box, Flex, Heading, Icon, Link, Text } from '@chakra-ui/react'
 import { LuCircleCheck } from 'react-icons/lu'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { parseApiDate } from '~utils/format'

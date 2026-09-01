@@ -1,6 +1,6 @@
 import { Button, Flex } from '@chakra-ui/react'
 import { LuCompass } from 'react-icons/lu'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { EmptyState } from '~components/shared/EmptyState'
 
 const NotFoundPage = () => (

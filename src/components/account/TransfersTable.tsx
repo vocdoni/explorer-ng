@@ -1,6 +1,6 @@
 import { Icon, Link, Tag, Table } from '@chakra-ui/react'
 import { useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { LuArrowDownLeft, LuArrowUpRight } from 'react-icons/lu'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'

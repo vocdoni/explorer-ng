@@ -1,5 +1,5 @@
 import { Grid, Input, Link, Table } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { PageHeader } from '~components/shared/PageHeader'

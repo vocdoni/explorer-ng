@@ -1,6 +1,6 @@
 import { Button, HStack, Input } from '@chakra-ui/react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 
 interface Props {
   placeholder: string

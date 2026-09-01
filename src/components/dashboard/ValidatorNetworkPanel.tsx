@@ -1,5 +1,5 @@
 import { Box, Flex, Link, Stack, Text } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router'
 import { EmptyState } from '~components/shared/EmptyState'
 import { PageSection } from '~components/shared/PageSection'
 import { StatusTag } from '~components/shared/StatusTag'

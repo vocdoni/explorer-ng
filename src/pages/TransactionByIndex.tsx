@@ -1,5 +1,5 @@
 import { Flex, Spinner, Text } from '@chakra-ui/react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router'
 import { EmptyState } from '~components/shared/EmptyState'
 import { useTransactionByIndex } from '~hooks/useVoconeApi'
 
