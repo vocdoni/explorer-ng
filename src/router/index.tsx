@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppLayout } from '~components/layout/AppLayout'
+import { applyLegacyUrl } from '~utils/legacyUrl'
 
 const Dashboard = lazy(() => import('~pages/Dashboard'))
 const Elections = lazy(() => import('~pages/Elections'))
@@ -42,6 +43,15 @@ const withSuspense = (node: React.ReactNode) => <Suspense fallback={<div>Loading
  * stack, so rebuilding it on a re-render — `AppBody` re-renders whenever the API
  * URL changes — would reset the stack and remount every page.
  */
+
+// `createBrowserRouter` snapshots `window.location` the moment it runs, and a
+// later `history.replaceState` fires no popstate, so the router would keep
+// rendering the original URL's match (the 404 catch-all) forever. Rewriting
+// legacy URLs must therefore happen in this module, immediately before the
+// router is created — a call from `main.tsx` runs after every import has been
+// evaluated, which is too late.
+applyLegacyUrl()
+
 const router = createBrowserRouter([
   {
     path: '/',
