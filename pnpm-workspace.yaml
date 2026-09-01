@@ -5,6 +5,12 @@
 # Dependency build scripts are blocked by default, and pnpm exits non-zero when
 # it skips one, which would fail CI. esbuild's postinstall links the
 # platform-specific binary that `vite build` and `chakra typegen` shell out to,
-# so both resolved copies (vite 5 -> 0.21, @chakra-ui/cli -> 0.28) are allowed.
+# so both resolved copies (vite 6 -> 0.25, @chakra-ui/cli -> 0.28) are allowed.
 allowBuilds:
   esbuild: true
+
+# @typescript-eslint 6.x pins minimatch to exactly 9.0.3, which is vulnerable to
+# ReDoS (GHSA advisory, fixed in 9.0.7). Patch-level override until the
+# typescript-eslint stack is upgraded.
+overrides:
+  "minimatch@9.0.3": 9.0.7
