@@ -1,6 +1,7 @@
 import { Box, Collapsible, Icon, Stack, Text } from '@chakra-ui/react'
 import type { ReactNode } from 'react'
 import { LuChevronRight } from 'react-icons/lu'
+import { JsonViewer } from '~components/shared/JsonViewer'
 
 interface Props {
   /** Overrides the default "Technical details" trigger copy. */
@@ -37,22 +38,7 @@ export const TechnicalDetails = ({ title = 'Technical details', json, children }
     <Collapsible.Content>
       <Stack gap={3} pt={2} pb={4}>
         {children}
-        {json !== undefined && (
-          <Box
-            as='pre'
-            p={3}
-            bg='bg.muted'
-            color='fg'
-            borderRadius='sm'
-            border='1px solid'
-            borderColor='border'
-            overflowX='auto'
-            fontSize='xs'
-            fontFamily='mono'
-          >
-            {JSON.stringify(json, null, 2)}
-          </Box>
-        )}
+        {json !== undefined && <JsonViewer json={json} />}
       </Stack>
     </Collapsible.Content>
   </Collapsible.Root>
