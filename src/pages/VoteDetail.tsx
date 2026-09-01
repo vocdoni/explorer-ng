@@ -29,8 +29,8 @@ const VoteDetailPage = () => {
   const vote = useVote(voteId)
   const electionId = vote.data?.electionID
   const election = useElectionWithMetadata(electionId ?? '')
-  // Read off the record this page already holds. `useElectionMeta` would resolve the
-  // same document from its own `/elections/{id}` fetch.
+  // Read off the record this page already holds, rather than resolving the same
+  // document through a second `/elections/{id}` fetch.
   const electionMeta = electionMetaFrom(election.data?.metadata)
   const content = useVoteContent(vote.data, election.data)
 

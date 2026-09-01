@@ -99,41 +99,29 @@ export const electionMetaFrom = (metadata?: ElectionMetadata): ElectionMeta => (
 const ELECTION_META_STALE_MS = 30 * 60 * 1000
 
 /**
- * An election's metadata document, wherever it lives.
+ * An election's metadata document, wherever it lives, resolved from a record the
+ * caller already holds — `/elections/{id}` carries `metadata` or `metadataURL`, so
+ * taking the record as an argument keeps this from re-fetching an endpoint the page
+ * is already polling. Callers holding only an id fan out through
+ * {@link useElectionTitles} instead.
  *
  * Metadata is immutable once an election is created, so this is cached hard and
  * never polled — unlike the election record itself, which carries the live vote
  * count. Every consumer that needs question wording, choice labels or the ballot
  * type shares this one cache entry.
  */
-export const useElectionMetadata = (electionId?: string, options?: { from?: Election; enabled?: boolean }) => {
+export const useElectionMetadata = (electionId?: string, from?: Election) => {
   const { apiUrl } = useApi()
-  const from = options?.from
   return useQuery({
     queryKey: ['election-metadata', apiUrl, electionId],
-    queryFn: async () => {
-      // `from` is the record a caller already holds. Without it this fetches
-      // `/elections/{id}` purely to read `metadata` / `metadataURL` off it, which on a
-      // page that is already polling that same endpoint is a duplicate request per view.
-      const election = from ?? (await fetchJson<Election>(q(apiUrl, `/elections/${electionId}`)))
-      return (await resolveElectionMetadata(election)) ?? null
-    },
-    enabled: !!electionId && (options?.enabled ?? true),
+    // `enabled` already holds this off until the record is in hand; the guard is what
+    // lets that be a type rather than a cast.
+    queryFn: async () => (from ? ((await resolveElectionMetadata(from)) ?? null) : null),
+    enabled: !!electionId && !!from,
     staleTime: ELECTION_META_STALE_MS,
     gcTime: ELECTION_META_STALE_MS,
     retry: false,
   })
-}
-
-/**
- * Human-readable title/description for an election, by id alone.
- *
- * Costs a `/elections/{id}` fetch of its own. A page that already holds the record
- * should call `electionMetaFrom(election.data?.metadata)` on it instead of adding this.
- */
-export const useElectionMeta = (electionId?: string) => {
-  const metadata = useElectionMetadata(electionId)
-  return { ...metadata, data: metadata.data ? electionMetaFrom(metadata.data) : undefined }
 }
 
 /**
@@ -149,7 +137,7 @@ export const useElectionWithMetadata = (electionId: string) => {
   // Held until the record arrives and then resolved from it. The query key is the one
   // list rows prime, so an election already opened elsewhere still resolves from cache
   // without ever running this.
-  const metadata = useElectionMetadata(electionId, { from: election.data, enabled: !!election.data })
+  const metadata = useElectionMetadata(electionId, election.data)
   const remote = metadata.data
   const data = useMemo(
     () => (election.data ? withMetadata(election.data, remote) : election.data),

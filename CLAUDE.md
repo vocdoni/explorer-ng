@@ -63,12 +63,12 @@ Three behaviours in this layer encode real API quirks — preserve them:
 - `optionalResource` maps 404 and 500 to `null`: `/elections/{id}/scrutiny` answers 500 (`code 5024`)
   until results exist and `/elections/{id}/keys` answers 404 (`code 4047`) unless the election is
   encrypted. Both are normal states, not failures, and neither is polled.
-- **Immutable resources are never polled.** Election metadata (`useElectionMeta`, 30 min stale/gc),
+- **Immutable resources are never polled.** Election metadata (`useElectionMetadata`, 30 min stale/gc),
   recorded votes, encryption keys, and `useVoteVerify` (`staleTime: Infinity`, `retry: false`) are all
   fetch-once. Only live chain state carries `refetchInterval: refreshMs`.
 
-`useElectionTitles` batches per-row title lookups through `useQueries`, sharing the `election-meta`
-cache key with `useElectionMeta`, and **caps the id list at 24** — there is no bulk-metadata endpoint,
+`useElectionTitles` batches per-row title lookups through `useQueries`, sharing the
+`election-metadata` cache key with `useElectionMetadata`, and **caps the id list at 24** — there is no bulk-metadata endpoint,
 so an uncapped page would fan out into an unbounded request burst.
 
 ### Election metadata
