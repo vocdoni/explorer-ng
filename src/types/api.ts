@@ -74,13 +74,31 @@ export interface ElectionSummary {
  */
 export type LocalizedText = { default?: string } & Record<string, string | undefined>
 
+/**
+ * The election-type discriminator the creating SDK writes into the metadata.
+ *
+ * This is the only authoritative statement of how an election's ballots were laid
+ * out — `tallyMode` alone cannot tell a pick-slot multichoice from an approval
+ * ballot, since both can present as `maxValue = 1`. `properties` is creator-written
+ * JSON whose shape depends on `name`, so read it through narrowing, never as a
+ * discriminated union.
+ */
+export interface ElectionMetadataType {
+  name?: string
+  properties?: Record<string, unknown>
+}
+
 export interface ElectionMetadata {
   title?: LocalizedText | string
   description?: LocalizedText | string
   media?: { header?: string; streamUri?: string }
+  type?: ElectionMetadataType
   questions?: Array<{
     title?: LocalizedText | string
     description?: LocalizedText | string
+    /** `value` is the *encoded* value only when it fits the wire alphabet
+     *  (`0..tallyMode.maxValue`); some metadata carries 1-based display labels
+     *  here instead. See `wireValuesUsable` in `~utils/ballotResults`. */
     choices?: Array<{ title?: LocalizedText | string; value?: number }>
   }>
   [key: string]: unknown
@@ -94,7 +112,10 @@ export interface Election {
   endDate: string
   voteCount: number
   finalResults: boolean
-  result?: string[][]
+  /** The raw results histogram: `result[field][value]`. A row is a ballot *field*,
+   *  not a question, and a column is a *value*, not a choice — how the two collapse
+   *  into a per-choice tally depends on the ballot type. See `~utils/ballotResults`. */
+  result?: string[][] | null
   manuallyEnded: boolean
   chainId: string
   metadataURL: string

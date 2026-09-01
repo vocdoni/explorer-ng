@@ -11,7 +11,7 @@ import { OverwriteNotice } from '~components/verify/OverwriteNotice'
 import { BallotContents } from '~components/vote/BallotContents'
 import { VoteJourney } from '~components/vote/VoteJourney'
 import { VoteReceiptHero } from '~components/vote/VoteReceiptHero'
-import { useElection, useElectionMeta, useVote } from '~hooks/useVoconeApi'
+import { electionMetaFrom, useElectionWithMetadata, useVote } from '~hooks/useVoconeApi'
 import { useVoteContent } from '~hooks/useVoteContent'
 
 const ENDED_STATUSES = ['ENDED', 'RESULTS', 'CANCELED']
@@ -28,8 +28,10 @@ const VoteDetailPage = () => {
   const { voteId = '' } = useParams()
   const vote = useVote(voteId)
   const electionId = vote.data?.electionID
-  const election = useElection(electionId ?? '')
-  const electionMeta = useElectionMeta(electionId)
+  const election = useElectionWithMetadata(electionId ?? '')
+  // Read off the record this page already holds, rather than resolving the same
+  // document through a second `/elections/{id}` fetch.
+  const electionMeta = electionMetaFrom(election.data?.metadata)
   const content = useVoteContent(vote.data, election.data)
 
   const overwriteCount = vote.data?.overwriteCount ?? 0
@@ -66,7 +68,7 @@ const VoteDetailPage = () => {
       <VoteReceiptHero
         voteId={voteId}
         electionId={electionId}
-        electionTitle={electionMeta.data?.title}
+        electionTitle={electionMeta.title}
         date={vote.data.date}
         blockHeight={blockHeight}
       />
