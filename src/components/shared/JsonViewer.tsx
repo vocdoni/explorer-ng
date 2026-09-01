@@ -68,7 +68,7 @@ export const JsonViewer = ({ json, space = 2, ...rest }: Props) => {
         {pretty.split(TOKEN_REGEX).map((part, index) => {
           const color = tokenColor(part)
           return color ? (
-            <Box as='span' key={index} color={color}>
+            <Box as='span' key={index} color={color} overflowWrap='anywhere'>
               {part}
             </Box>
           ) : (
