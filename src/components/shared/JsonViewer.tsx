@@ -1,4 +1,4 @@
-import { Box, type BoxProps } from '@chakra-ui/react'
+import { Box, type BoxProps, Clipboard, IconButton } from '@chakra-ui/react'
 import { Fragment } from 'react'
 
 /**
@@ -31,35 +31,51 @@ interface Props extends BoxProps {
   space?: number
 }
 
-/** Syntax-highlighted JSON block, the single way raw payloads are printed. */
+/**
+ * Syntax-highlighted JSON block, the single way raw payloads are printed.
+ *
+ * The copy button carries the exact `JSON.stringify` output — selecting the
+ * highlighted spans by hand can pick up extra whitespace and line breaks, so
+ * the button is the faithful way to copy the payload (the legacy explorer's
+ * `RawContentBox` shipped the same affordance).
+ */
 export const JsonViewer = ({ json, space = 2, ...rest }: Props) => {
   const pretty = JSON.stringify(json, null, space) ?? ''
   return (
-    <Box
-      as='pre'
-      p={3}
-      bg='bg.muted'
-      color='fg'
-      borderRadius='sm'
-      border='1px solid'
-      borderColor='border'
-      overflowX='auto'
-      fontSize='xs'
-      fontFamily='mono'
-      whiteSpace='pre-wrap'
-      overflowWrap='anywhere'
-      {...rest}
-    >
-      {pretty.split(TOKEN_REGEX).map((part, index) => {
-        const color = tokenColor(part)
-        return color ? (
-          <Box as='span' key={index} color={color}>
-            {part}
-          </Box>
-        ) : (
-          <Fragment key={index}>{part}</Fragment>
-        )
-      })}
+    <Box position='relative' {...rest}>
+      <Clipboard.Root value={pretty} position='absolute' top={2} right={2}>
+        <Clipboard.Trigger asChild>
+          <IconButton size='2xs' variant='ghost' aria-label='Copy JSON'>
+            <Clipboard.Indicator />
+          </IconButton>
+        </Clipboard.Trigger>
+      </Clipboard.Root>
+      <Box
+        as='pre'
+        p={3}
+        pr={10}
+        bg='bg.muted'
+        color='fg'
+        borderRadius='sm'
+        border='1px solid'
+        borderColor='border'
+        overflowX='auto'
+        fontSize='xs'
+        fontFamily='mono'
+        whiteSpace='pre-wrap'
+        overflowWrap='anywhere'
+      >
+        {pretty.split(TOKEN_REGEX).map((part, index) => {
+          const color = tokenColor(part)
+          return color ? (
+            <Box as='span' key={index} color={color}>
+              {part}
+            </Box>
+          ) : (
+            <Fragment key={index}>{part}</Fragment>
+          )
+        })}
+      </Box>
     </Box>
   )
 }
