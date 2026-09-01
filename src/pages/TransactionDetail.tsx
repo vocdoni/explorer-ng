@@ -40,11 +40,15 @@ const TransactionDetailPage = () => {
         <DetailRow label='Action'>{typeLabel}</DetailRow>
         <DetailRow label='Subtype'>{info?.subtype || '—'}</DetailRow>
         <DetailRow label='Block height'>
-          <Link asChild variant='plain'>
-            <RouterLink to={`/block/${info?.height ?? ''}`}>{info?.height ?? 0}</RouterLink>
-          </Link>
+          {info ? (
+            <Link asChild variant='plain'>
+              <RouterLink to={`/block/${info.height}`}>{info.height}</RouterLink>
+            </Link>
+          ) : (
+            '—'
+          )}
         </DetailRow>
-        <DetailRow label='Position in block'>{info?.index ?? 0}</DetailRow>
+        <DetailRow label='Position in block'>{info?.index ?? '—'}</DetailRow>
         <DetailRow label='Signer'>
           <HashDisplay value={info?.signer} copyLabel='Signer address' />
         </DetailRow>

@@ -57,10 +57,12 @@ const VotesPage = () => {
                   <Table.Cell textAlign='end'>
                     {v.blockTime ? (
                       <RelativeTime value={v.blockTime} mode='relative' fontSize='sm' />
-                    ) : (
+                    ) : v.blockHeight !== undefined ? (
                       <Link asChild variant='plain'>
-                        <RouterLink to={`/block/${v.blockHeight ?? ''}`}>block {v.blockHeight ?? 0}</RouterLink>
+                        <RouterLink to={`/block/${v.blockHeight}`}>block {v.blockHeight}</RouterLink>
                       </Link>
+                    ) : (
+                      '—'
                     )}
                   </Table.Cell>
                 </Table.Row>

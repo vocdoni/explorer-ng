@@ -138,9 +138,13 @@ export const EvidenceChain = ({ verification }: { verification: Verification }) 
       ) : (
         <DetailGrid columns={{ base: 1, sm: 2 }} gap={4}>
           <DetailRow label='Block'>
-            <Link asChild variant='plain'>
-              <RouterLink to={`/block/${blockHeight ?? ''}`}>{(blockHeight ?? 0).toLocaleString()}</RouterLink>
-            </Link>
+            {blockHeight !== undefined ? (
+              <Link asChild variant='plain'>
+                <RouterLink to={`/block/${blockHeight}`}>{blockHeight.toLocaleString()}</RouterLink>
+              </Link>
+            ) : (
+              '—'
+            )}
           </DetailRow>
           <DetailRow label='Transaction'>
             {vote.data?.txHash ? (
