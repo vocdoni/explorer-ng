@@ -308,6 +308,7 @@ export const useVoteContent = (vote?: Vote, election?: Election): VoteContent =>
   const tallyMode = election?.tallyMode
   const votes = pkg?.votes
   const questionCount = election?.metadata?.questions?.length ?? 0
+  const firstChoiceCount = election?.metadata?.questions?.[0]?.choices?.length ?? 0
 
   // The same resolution the results page uses, so a ballot and the tally it was
   // counted into never disagree about what its numbers mean.
@@ -317,10 +318,16 @@ export const useVoteContent = (vote?: Vote, election?: Election): VoteContent =>
     if (!votes || !questionCount || !kind) return 'raw'
     // A layout the explorer knows still has to fit the ballot in front of it: a
     // package of the wrong length means the two do not describe the same election.
-    const expected = kind === 'single-choice' ? questionCount : undefined
+    //
+    // Single-choice puts one field per question. Approval, budget and quadratic put one
+    // field per *option* and are read by position, so a short package silently renders
+    // the trailing options as unchosen or as zero credits — an answer, not an absence.
+    // Multichoice is the exception: its fields are pick-slots matched by value rather
+    // than by position, so its length cannot shift a choice onto the wrong option.
+    const expected = kind === 'single-choice' ? questionCount : kind === 'multichoice' ? undefined : firstChoiceCount
     if (expected !== undefined && votes.length !== expected) return 'raw'
     return kind
-  }, [votes, questionCount, kind])
+  }, [votes, questionCount, firstChoiceCount, kind])
 
   const questions = useMemo(
     () => (votes ? buildQuestions(votes, election?.metadata, shape, numberField(tallyMode, 'maxValue')) : []),
