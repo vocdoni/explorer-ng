@@ -3,6 +3,7 @@ import { LuBoxes, LuCalendarClock, LuReceipt, LuScale, LuShieldCheck } from 'rea
 import { Link as RouterLink } from 'react-router-dom'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
+import { JsonViewer } from '~components/shared/JsonViewer'
 import { PageSection } from '~components/shared/PageSection'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { StatTile } from '~components/shared/StatTile'
@@ -196,20 +197,7 @@ const VoteDetailPage = () => {
           <HashDisplay value={vote.data.txHash} copyLabel='Transaction hash' full />
         </TechnicalField>
         <TechnicalField label='Vote package'>
-          <Box
-            as='pre'
-            mt={1}
-            p={3}
-            bg='bg.muted'
-            borderRadius='sm'
-            border='1px solid'
-            borderColor='border'
-            overflowX='auto'
-            fontSize='xs'
-            fontFamily='mono'
-          >
-            {JSON.stringify(vote.data.package ?? null, null, 2)}
-          </Box>
+          <JsonViewer json={vote.data.package ?? null} mt={1} />
         </TechnicalField>
       </TechnicalDetails>
     </Grid>
