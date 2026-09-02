@@ -42,34 +42,38 @@ const texts = {
 
 export const colors = defineSemanticTokens.colors({
   chakra,
+  // The page sits a step deeper into the cream than the site's body so card
+  // panels visibly lift off it on standard-gamut screens — the light-mode
+  // mirror of how dark mode separates its surfaces. Order, page-relative:
+  // muted < emphasized < DEFAULT (page) < subtle (callouts) < panel (cards).
   bg: {
     DEFAULT: {
       value: {
-        _light: 'oklch(0.988 0.011 97)', // warm cream, never white
+        _light: 'oklch(0.962 0.022 97)', // tinted cream, never white
         _dark: '{colors.brand.650}',
       },
     },
     subtle: {
       value: {
-        _light: 'oklch(0.97 0.015 97)',
+        _light: 'oklch(0.978 0.016 97)',
         _dark: 'oklch(0.235 0.012 107)',
       },
     },
     muted: {
       value: {
-        _light: 'oklch(0.936 0.033 97)', // deeper cream band
+        _light: 'oklch(0.93 0.033 97)', // deeper cream band
         _dark: 'oklch(0.27 0.013 106)',
       },
     },
     panel: {
       value: {
-        _light: 'oklch(0.988 0.011 97)',
+        _light: 'oklch(0.992 0.008 97)', // near-white cream card surface
         _dark: 'oklch(0.235 0.012 107)',
       },
     },
     emphasized: {
       value: {
-        _light: 'oklch(0.925 0.028 97)',
+        _light: 'oklch(0.915 0.03 97)',
         _dark: 'oklch(0.3 0.013 106)',
       },
     },
@@ -197,7 +201,9 @@ export const colors = defineSemanticTokens.colors({
         },
         bg: {
           value: {
-            _light: '{colors.bg}',
+            // The panel white, not the page cream — the raised pill must lift
+            // off the muted track the same way cards lift off the page.
+            _light: '{colors.bg.panel}',
             _dark: creamInk(0.14),
           },
         },

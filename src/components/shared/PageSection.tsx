@@ -15,7 +15,7 @@ interface Props extends Omit<BoxProps, 'right' | 'title'> {
  * rhythm, and the only place that yellow exists.
  */
 export const PageSection = ({ title, subtitle, right, children, ...rest }: Props) => (
-  <Box borderRadius='lg' border='1px solid' borderColor='border' p={4} minW={0} {...rest}>
+  <Box bg='bg.panel' borderRadius='lg' border='1px solid' borderColor='border' p={4} minW={0} {...rest}>
     <Flex
       justify='space-between'
       align={{ base: 'flex-start', md: 'center' }}
