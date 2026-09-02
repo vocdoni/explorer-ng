@@ -184,11 +184,18 @@ between. Filter inputs hold local drafts and are committed on "Apply".
 
 ### Theme
 
-Chakra UI v3 `createSystem` in `src/theme/system.ts`. The app is monochrome by design: `html`'s
-`colorPalette` is pinned to `gray`, and `colorPalette` should only be set at a call site to signal
-**state** (status tags, tx families). Per-component styling lives in `src/theme/recipes/`, not in
-inline props; `src/theme/semantic.ts` holds semantic tokens, several marked `@deprecated` in favour of
-Chakra's built-ins (`bg`, `fg`, `fg.muted`, `border`). Raw hex must never appear at a call site.
+Chakra UI v3 `createSystem` in `src/theme/system.ts`, implementing the vocdoni.io identity (see that
+repo's `DESIGN.md`): warm cream surfaces — never pure white — with a single warm ink whose fixed alpha
+tiers (64% muted, 55% faint, 10% hairlines) produce every text and line color; Fraunces serif headings
+at their single weight 400 (never bolded — the heading recipe enforces it); Hanken Grotesk body;
+JetBrains Mono for hashes and code; the deep Vocdoni green as the one chrome accent (links, focus
+rings); and signal yellow existing only as the eyebrow dot on section titles. Dark mode mirrors the
+recipe with ink and cream swapped. `html`'s `colorPalette` stays pinned to `gray` (a warm-tinted ramp),
+and `colorPalette` should only be set at a call site to signal **state** (status tags, tx families).
+Code/JSON surfaces render as dark "terminal windows" in both modes. Per-component styling lives in
+`src/theme/recipes/`, not in inline props; `src/theme/semantic.ts` holds semantic tokens, several
+marked `@deprecated` in favour of Chakra's built-ins (`bg`, `fg`, `fg.muted`, `border`). Raw hex or
+oklch must never appear at a call site.
 
 ### Shared components and label mapping
 

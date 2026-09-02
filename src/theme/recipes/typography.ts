@@ -1,38 +1,55 @@
 import { defineRecipe } from '@chakra-ui/react'
 
+/**
+ * Headings are the Fraunces display serif at its single weight, 400 — never
+ * bolded. SOFT maxed rounds the serifs into the warm editorial voice; WONK
+ * stays off for legibility. This mirrors the vocdoni.io base layer.
+ */
 export const heading = defineRecipe({
   base: {
-    fontWeight: 'bold',
+    fontFamily: 'heading',
+    fontWeight: 'normal',
+    fontVariationSettings: "'SOFT' 100, 'WONK' 0",
+    letterSpacing: '-0.02em',
+    textWrap: 'balance',
   },
 })
 
 export const link = defineRecipe({
   base: {
-    color: 'gray.800',
+    color: 'primary',
     textDecoration: 'underline',
     textDecorationThickness: 'from-font',
     textUnderlineOffset: '0.15em',
-    _dark: {
-      color: 'gray.400',
-      _hover: { color: 'gray.200' },
-    },
     _hover: {
-      color: 'gray.500',
+      color: 'primary.emphasized',
     },
   },
   variants: {
     variant: {
-      // Chakra's default `plain` variant fades the underline to currentColor/20
-      // and shifts its offset on hover, fighting the base styles above.
+      // Chakra's default `plain`/`underline` variants repaint `colorPalette.fg`
+      // over the base (variants apply after base), and `plain` fades the
+      // underline to currentColor/20 on hover — restate the green here.
       plain: {
+        color: 'primary',
         _hover: {
+          color: 'primary.emphasized',
           textDecorationColor: 'currentColor',
           textUnderlineOffset: '0.15em',
         },
       },
+      underline: {
+        color: 'primary',
+        _hover: {
+          color: 'primary.emphasized',
+        },
+      },
+      // A link dressed as its content (wordmark, card titles): no underline,
+      // and no green — it inherits the surrounding ink.
       unstyled: {
+        color: 'inherit',
         textDecoration: 'none',
-        _hover: { textDecoration: 'none' },
+        _hover: { color: 'inherit', textDecoration: 'none' },
       },
       icon: {
         display: 'flex',

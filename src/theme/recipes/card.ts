@@ -30,6 +30,12 @@ const dataListItem = {
 
 export const card = defineSlotRecipe({
   slots: cardAnatomy.keys(),
+  // Panel surfaces sit on the 16px reference radius with hairline borders.
+  base: {
+    root: {
+      borderRadius: 'lg',
+    },
+  },
   variants: {
     variant: {
       'data-list-item': dataListItem,

@@ -9,9 +9,13 @@ interface Props extends Omit<BoxProps, 'right' | 'title'> {
   right?: ReactNode
 }
 
-/** The workhorse content panel: 8px radius, 1px hairline, no shadow. */
+/**
+ * The workhorse content panel: 16px radius, 1px hairline, no shadow. Every
+ * section title carries the signal-yellow eyebrow dot — the vocdoni.io section
+ * rhythm, and the only place that yellow exists.
+ */
 export const PageSection = ({ title, subtitle, right, children, ...rest }: Props) => (
-  <Box borderRadius='md' border='1px solid' borderColor='border' p={4} minW={0} {...rest}>
+  <Box borderRadius='lg' border='1px solid' borderColor='border' p={4} minW={0} {...rest}>
     <Flex
       justify='space-between'
       align={{ base: 'flex-start', md: 'center' }}
@@ -20,7 +24,10 @@ export const PageSection = ({ title, subtitle, right, children, ...rest }: Props
       mb={4}
     >
       <Box>
-        <Heading size='md'>{title}</Heading>
+        <Flex align='center' gap={2}>
+          <Box boxSize='8px' borderRadius='full' bg='signal' flexShrink={0} aria-hidden />
+          <Heading size='md'>{title}</Heading>
+        </Flex>
         {subtitle && (
           <Text mt={1} fontSize='sm' color='texts.subtle'>
             {subtitle}

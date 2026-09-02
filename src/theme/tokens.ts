@@ -2,36 +2,39 @@ import { defineTokens } from '@chakra-ui/react'
 import { colors } from './colors'
 
 /**
- * Design tokens ported from vocdoni-app (`src/theme/tokens.ts`).
+ * Design tokens aligned with the vocdoni.io reference (DESIGN.md).
  *
- * The font-weight remap is the crux of the aesthetic: `bold` renders 400 and
- * `normal`/`medium` render 300, so everything reads thin and editorial. Only
- * Inter 300/400/500 are loaded — heavier weights would silently fall back.
+ * Typography carries the identity: Hanken Grotesk for body/UI, the Fraunces
+ * display serif for headings (single weight 400, never bolded — the heading
+ * recipe enforces it), JetBrains Mono for hashes and code. `bold` maps to 600
+ * (semibold) so emphasis reads as labels/buttons do on the site, not as heavy
+ * display type.
  */
 const fonts = defineTokens.fonts({
-  body: { value: `"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif` },
-  heading: { value: `"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif` },
-  mono: { value: `'Menlo', monospace` },
+  body: { value: `"Hanken Grotesk Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` },
+  heading: { value: `"Fraunces Variable", Georgia, 'Times New Roman', serif` },
+  mono: { value: `"JetBrains Mono Variable", 'Menlo', monospace` },
 })
 
 const fontWeights = defineTokens.fontWeights({
-  normal: { value: '300' },
-  medium: { value: '300' },
-  bold: { value: '400' },
-  bolder: { value: '500' },
+  normal: { value: '400' },
+  medium: { value: '500' },
+  bold: { value: '600' },
+  bolder: { value: '650' },
 })
 
+// The reference radius scale: 16px panels, 10/12px controls, pills for chips.
 const radii = defineTokens.radii({
   none: { value: '0rem' },
-  xxs: { value: '2px' },
-  xs: { value: '4px' },
-  sm: { value: '6px' },
-  md: { value: '8px' },
-  lg: { value: '10px' },
-  xl: { value: '12px' },
-  '2xl': { value: '16px' },
-  '3xl': { value: '20px' },
-  '4xl': { value: '24px' },
+  xxs: { value: '3px' },
+  xs: { value: '6px' },
+  sm: { value: '10px' },
+  md: { value: '12px' },
+  lg: { value: '16px' },
+  xl: { value: '20px' },
+  '2xl': { value: '24px' },
+  '3xl': { value: '28px' },
+  '4xl': { value: '32px' },
   full: { value: '9999px' },
 })
 

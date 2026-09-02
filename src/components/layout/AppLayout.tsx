@@ -99,19 +99,17 @@ export const AppLayout = () => {
 
   return (
     <Flex position='relative' direction='column' minH='100dvh' bg='bg'>
-      {/* Opaque rather than translucent: a sticky bar that content scrolls
-          under has to stay readable, and the gradient plus a soft shadow reads
-          as a raised surface without introducing any colour. */}
+      {/* The vocdoni.io glass bar: translucent cream with a backdrop blur and a
+          hairline bottom border, so content scrolls under it and stays legible
+          without a shadow or gradient. */}
       <Box
         as='header'
         position='sticky'
         top={0}
         w='full'
         zIndex={30}
-        bgGradient='to-b'
-        gradientFrom='bg'
-        gradientTo='bg.muted'
-        boxShadow='0 1px 2px rgba(0,0,0,0.04), 0 8px 24px -16px rgba(0,0,0,0.35)'
+        bg='bg/75'
+        backdropFilter='blur(14px)'
         borderBottom='1px solid'
         borderColor='border'
       >
@@ -176,15 +174,7 @@ export const AppLayout = () => {
 
       {/* No navigation down here: everything the footer used to link to lives in
           the header, one scroll-free click away. What is left is provenance. */}
-      <Box
-        as='footer'
-        w='full'
-        bgGradient='to-b'
-        gradientFrom='bg'
-        gradientTo='bg.muted'
-        borderTop='1px solid'
-        borderColor='border'
-      >
+      <Box as='footer' w='full' bg='bg.muted' borderTop='1px solid' borderColor='border'>
         <Box maxW='navbar' mx='auto' px={{ base: 4, md: 6, xl: 10 }}>
           <Flex
             direction={{ base: 'column', md: 'row' }}

@@ -6,10 +6,11 @@ import { ApiProvider, useApiConfig } from '~contexts/ApiContext'
 import { Router } from '~router'
 import { ColorModeProvider, system } from '~theme'
 
-import '@fontsource/inter/300.css'
-import '@fontsource/inter/400.css'
-import '@fontsource/inter/500.css'
-import '@fontsource/inter/index.css'
+// `full` carries Fraunces' SOFT/WONK axes — the heading recipe maxes SOFT for
+// the warm display voice, so the wght-only file is not enough.
+import '@fontsource-variable/fraunces/full.css'
+import '@fontsource-variable/hanken-grotesk/index.css'
+import '@fontsource-variable/jetbrains-mono/index.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {
