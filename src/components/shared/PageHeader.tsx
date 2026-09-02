@@ -20,7 +20,7 @@ export const PageHeader = ({ title, subtitle, status, breadcrumb, actions }: Pro
     {breadcrumb && <Box mb={2}>{breadcrumb}</Box>}
     <Flex justify='space-between' align='flex-start' gap={4} wrap='wrap'>
       <Box minW={0} flex='1'>
-        <Heading size='2xl' fontWeight='bold' display='flex' gap={3} alignItems='center' flexWrap='wrap'>
+        <Heading size='2xl' display='flex' gap={3} alignItems='center' flexWrap='wrap'>
           {title}
           {status && <StatusTag status={status} />}
         </Heading>

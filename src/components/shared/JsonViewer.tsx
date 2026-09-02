@@ -13,16 +13,18 @@ const TOKEN_REGEX =
   /("(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g
 
 /**
- * Chakra's built-in `*.fg` semantic tokens adapt to the color mode, unlike the
- * raw `green.500`-style values the legacy component used. This is syntax
- * color, not state, so it intentionally sits outside the monochrome
- * `colorPalette` rule.
+ * Code surfaces render in a dark "terminal window" regardless of the cream
+ * page (the vocdoni.io code-block rule), so the syntax colors are fixed raw
+ * palette values tuned for the dark ink surface — not mode-adaptive `*.fg`
+ * tokens, which would go dark-on-dark in light mode. This is syntax color,
+ * not state, so it intentionally sits outside the monochrome `colorPalette`
+ * rule: emerald strings, amber numbers, blue booleans, purple null.
  */
 const tokenColor = (part: string): string | undefined => {
-  if (part.startsWith('"')) return part.endsWith(':') ? 'fg.muted' : 'green.fg'
-  if (part === 'true' || part === 'false') return 'blue.fg'
-  if (part === 'null') return 'purple.fg'
-  if (/^-?\d/.test(part)) return 'red.fg'
+  if (part.startsWith('"')) return part.endsWith(':') ? 'gray.300' : 'green.400'
+  if (part === 'true' || part === 'false') return 'blue.300'
+  if (part === 'null') return 'purple.300'
+  if (/^-?\d/.test(part)) return 'orange.300'
   return undefined
 }
 
@@ -45,7 +47,15 @@ export const JsonViewer = ({ json, space = 2, ...rest }: Props) => {
     <Box position='relative' {...rest}>
       <Clipboard.Root value={pretty} position='absolute' top={2} right={2}>
         <Clipboard.Trigger asChild>
-          <IconButton size='2xs' variant='ghost' aria-label='Copy JSON'>
+          {/* Sits over the always-dark code surface, so it keeps light ink in
+              both color modes instead of the adaptive ghost defaults. */}
+          <IconButton
+            size='2xs'
+            variant='ghost'
+            aria-label='Copy JSON'
+            color='fg.code'
+            _hover={{ bg: 'whiteAlpha.200', color: 'fg.code' }}
+          >
             <Clipboard.Indicator />
           </IconButton>
         </Clipboard.Trigger>
@@ -54,8 +64,8 @@ export const JsonViewer = ({ json, space = 2, ...rest }: Props) => {
         as='pre'
         p={3}
         pr={10}
-        bg='bg.muted'
-        color='fg'
+        bg='bg.code'
+        color='fg.code'
         borderRadius='sm'
         border='1px solid'
         borderColor='border'

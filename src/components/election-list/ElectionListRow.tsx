@@ -40,7 +40,9 @@ export const ElectionListRow = ({ election, title }: Props) => (
       {election.voteCount.toLocaleString()} {election.voteCount === 1 ? 'vote' : 'votes'}
     </Table.Cell>
     <Table.Cell>
-      <HashDisplay value={election.electionId} copyLabel='Election ID' />
+      {/* A touch shorter than the app default: the un-truncated status chips
+          need the ~40px this abbreviation gives back, or the table scrolls. */}
+      <HashDisplay value={election.electionId} copyLabel='Election ID' left={6} right={4} />
     </Table.Cell>
   </Table.Row>
 )

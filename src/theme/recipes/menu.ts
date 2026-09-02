@@ -1,24 +1,27 @@
 import { defineSlotRecipe } from '@chakra-ui/react'
 import { menuAnatomy } from '@chakra-ui/react/anatomy'
 
+// Dropdown panels follow the site's popover chrome: rounded panel, hairline
+// border, layered shadow, cream surface; items get soft ink-tint hovers.
 const baseStyle = {
   content: {
     p: 1,
-    borderRadius: 'sm',
-    boxShadow: 'md',
-    bg: 'chakra.body.bg',
+    borderRadius: 'lg',
+    boxShadow: 'lg',
+    border: '1px solid',
+    borderColor: 'border',
+    bg: 'bg.panel',
   },
   item: {
-    bg: 'chakra.body.bg',
+    borderRadius: 'sm',
+    bg: 'transparent',
     _selected: {
-      bg: 'gray.100',
-      color: 'black',
-      _dark: { bg: 'brand.700', color: 'white' },
+      bg: 'bg.muted',
+      color: 'fg',
     },
     _focus: {
-      bg: 'gray.100',
-      color: 'black',
-      _dark: { bg: 'brand.800', color: 'white' },
+      bg: 'bg.muted',
+      color: 'fg',
     },
   },
   separator: {

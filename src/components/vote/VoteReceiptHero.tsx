@@ -61,7 +61,7 @@ export const VoteReceiptHero = ({ voteId, electionId, electionTitle, date, block
         </Flex>
 
         <Box minW={0} flex='1'>
-          <Heading size='2xl' fontWeight='bold' lineHeight={1.15}>
+          <Heading size='2xl' lineHeight={1.15}>
             Vote recorded
           </Heading>
           <Text mt={2} fontSize='md' color='fg'>

@@ -12,6 +12,23 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script src="/runtime-config.js"></script>
+    <style>
+      /* Base-layer rules from the vocdoni.io reference that sit below the
+         Chakra theme: text polish, and a global reduced-motion collapse. */
+      body {
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        text-wrap: pretty;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

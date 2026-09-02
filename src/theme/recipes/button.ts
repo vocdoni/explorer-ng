@@ -5,6 +5,12 @@ const baseStyle = defineStyle({
   fontWeight: 'bold',
   borderRadius: 'sm',
   fontSize: 'sm',
+  // The site-wide press-down micro-interaction (`.press-scale`). Scoped to
+  // named properties — never `transition: all`.
+  transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
+  _active: {
+    transform: 'scale(0.96)',
+  },
   _currentPage: {
     fontWeight: 'bold',
     backgroundColor: {
@@ -62,10 +68,18 @@ const navbar = defineStyle({
   _currentPage: { bg: 'bg.muted', color: 'fg', fontWeight: 'bolder' },
 })
 
+// The signature CTA from vocdoni.io: solid buttons render as dark ink pills
+// (`rounded-full font-semibold`). The ink fill itself comes from the warm
+// gray ramp via the pinned `colorPalette`.
+const solid = defineStyle({
+  borderRadius: 'full',
+})
+
 export const button = defineRecipe({
   base: baseStyle,
   variants: {
     variant: {
+      solid,
       unstyled,
       navbar,
       link,
