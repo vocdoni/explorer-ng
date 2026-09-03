@@ -1,18 +1,35 @@
 name: Deploy to Netlify
 
+# Single deploy target for every environment, mirroring vocdoni.io's setup: the Netlify site and
+# every build-time value come from the GitHub environment selected below, so this file never
+# hardcodes a site:
+#
+#   push to `lts`  -> `production`    -> the stable explorer (LTS gateway)
+#   push to `main` -> `develop`       -> dev site (a production deploy of *that* site)
+#   pull request   -> `pull request`  -> preview deploy on the preview site
+#
+# Each environment must define:
+#   variables NETLIFY_SITE_ID, NETLIFY_SITE_NAME
+#   variables VOCONE_API_URL, VOCONE_REFRESH_MS (optional; the app falls back to the public
+#             LTS gateway and a 15s poll when unset)
+# NETLIFY_AUTH_TOKEN is a repository-wide secret. The site id is deliberately a variable, not a
+# secret: a Netlify site's API id is not sensitive, and variables are visible in run logs, which
+# makes a deploy-to-the-wrong-site mistake diagnosable.
+
 on:
   push:
     branches:
+      - lts
       - main
   pull_request:
     branches:
+      - lts
       - main
 
-# Superseded runs deploy previews nobody will look at, so drop them as soon as a
-# newer commit lands on the same ref.
 concurrency:
+  # Never cancel a branch deploy midway; superseded PR previews are worth cancelling.
   group: netlify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -25,15 +42,21 @@ permissions:
 
 jobs:
   deploy:
+    # Dependabot-triggered runs never receive Actions secrets or the
+    # environment-scoped variables this job builds and deploys with (Dependabot
+    # only sees its own separate secrets store), so the whole job is skipped
+    # rather than left to fail on empty credentials. A dependency bump doesn't
+    # need a deploy preview.
+    if: github.actor != 'dependabot[bot]'
+
     runs-on: ubuntu-latest
 
-    # Selects which VOCONE_* variables the build below sees: PRs build against
-    # the dev gateway, main against the production one. Environment variables
-    # are only injected into a job that names its environment, so without this
-    # `vars.VOCONE_API_URL` resolves to empty and every build silently falls
-    # back to the hardcoded default in src/contexts/ApiContext.tsx.
-    # The Netlify credentials are repository secrets, so they are unaffected.
-    environment: "${{ github.event_name == 'pull_request' && 'pull request' || 'production' }}"
+    # Selects which variables the job sees (see the header comment for the mapping and the
+    # required configuration). Environment variables are only injected into a job that names
+    # its environment, so without this every `vars.*` below resolves to empty.
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'pull request' || (github.ref_name == 'lts' && 'production' || 'develop') }}
+      url: ${{ steps.deploy.outputs.deploy-url }}
 
     steps:
       - name: Checkout code
@@ -67,32 +90,33 @@ jobs:
         run: pnpm build
         env:
           # Vite's `envPrefix` (see vite.config.ts) exposes these to the bundle.
-          # They come from the environment selected above, so the gateway is
-          # baked in at build time and a preview keeps pointing at the dev
-          # gateway even after the same commit is rebuilt for main. Both are
-          # optional: src/contexts/ApiContext.tsx falls back to the public LTS
-          # gateway and a 15s poll when unset.
+          # They come from the environment selected above, so each site is built
+          # against its own gateway and a preview keeps pointing at the dev
+          # gateway even after the same commit is rebuilt for a branch.
           VOCONE_API_URL: ${{ vars.VOCONE_API_URL }}
           VOCONE_REFRESH_MS: ${{ vars.VOCONE_REFRESH_MS }}
 
       - name: Deploy to Netlify
-        # Dependabot-triggered runs never receive Actions secrets (they only see
-        # the separate Dependabot secrets store), so NETLIFY_AUTH_TOKEN/SITE_ID
-        # come up empty and fails-without-credentials turns that into a hard
-        # failure. A dependency bump doesn't need a deploy preview anyway, so
-        # skip the deploy and let the build above act as the CI check.
-        if: github.actor != 'dependabot[bot]'
+        id: deploy
         uses: nwtgck/actions-netlify@v4.0
         with:
           publish-dir: './dist'
-          production-branch: main
+          # The branch whose pushes are production deploys *for the selected site*. Following the
+          # pushed ref makes every branch push a production deploy of whichever site its
+          # environment points at (main is "production" on the dev site, lts on the stable one).
+          # On a pull_request run the workflow sits on the PR merge ref, which never matches, so
+          # PRs always get preview deploys.
+          production-branch: ${{ github.event_name == 'pull_request' && 'main' || github.ref_name }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: 'Deploy from GitHub Actions'
           enable-pull-request-comment: true
           overwrites-pull-request-comment: true
+          # Names the action's GitHub deployment record after the Netlify site it went to, so
+          # deploys to the two sites stay distinguishable in the repository's deployments view.
+          github-deployment-environment: ${{ vars.NETLIFY_SITE_NAME }}
           # Creating a commit comment needs `contents: write`, which this job
           # does not have. On a PR it would only duplicate the comment above,
-          # and on main the GitHub deployment record already carries the URL.
+          # and on a branch the GitHub deployment record already carries the URL.
           enable-commit-comment: false
           # Without this the action treats absent credentials as "nothing to do"
           # and the step passes green having deployed nothing, which is
@@ -100,5 +124,5 @@ jobs:
           fails-without-credentials: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
         timeout-minutes: 10
