@@ -1,6 +1,11 @@
+/**
+ * The gateway's list envelope. There is no `totalPages`: the page count comes
+ * from `lastPage`, which is the 0-based index of the final page — use
+ * `totalPagesOf` in `~utils/pagination` rather than reading either field at a
+ * call site.
+ */
 export interface Pagination {
   totalItems: number
-  totalPages: number
   previousPage?: number | null
   currentPage: number
   nextPage?: number | null

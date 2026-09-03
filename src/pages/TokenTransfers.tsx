@@ -12,6 +12,7 @@ import { RelativeTime } from '~components/shared/RelativeTime'
 import { StatTile } from '~components/shared/StatTile'
 import { useAccountsList, useChainTransfers } from '~hooks/useAccounts'
 import { useUrlListState } from '~hooks/useUrlListState'
+import { totalPagesOf } from '~utils/pagination'
 
 const DEFAULTS = { tab: 'transfers', page: '0', account: '', holdersPage: '0' }
 
@@ -129,7 +130,7 @@ const TokenTransfersPage = () => {
             </PageSection>
             <PaginationControls
               page={page}
-              totalPages={transfers.data?.pagination?.totalPages}
+              totalPages={totalPagesOf(transfers.data?.pagination)}
               onChange={(next) => setState({ page: String(next) })}
             />
           </Grid>
@@ -173,7 +174,7 @@ const TokenTransfersPage = () => {
             </PageSection>
             <PaginationControls
               page={holdersPage}
-              totalPages={holders.data?.pagination?.totalPages}
+              totalPages={totalPagesOf(holders.data?.pagination)}
               onChange={(next) => setState({ holdersPage: String(next) })}
             />
           </Grid>

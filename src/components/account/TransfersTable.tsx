@@ -8,6 +8,7 @@ import { PaginationControls } from '~components/shared/PaginationControls'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { useAccountTransfers } from '~hooks/useAccounts'
+import { totalPagesOf } from '~utils/pagination'
 
 interface Props {
   /** The account this table is scoped to — direction badges are relative to it. */
@@ -70,7 +71,7 @@ export const TransfersTable = ({ address }: Props) => {
       {!transfers.isLoading && rows.length === 0 && (
         <EmptyState title='No token transfers' hint='This account has not sent or received any tokens yet.' />
       )}
-      <PaginationControls page={page} totalPages={transfers.data?.pagination?.totalPages} onChange={setPage} />
+      <PaginationControls page={page} totalPages={totalPagesOf(transfers.data?.pagination)} onChange={setPage} />
     </>
   )
 }

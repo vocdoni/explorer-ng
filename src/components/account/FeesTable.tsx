@@ -7,6 +7,7 @@ import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { useAccountFees } from '~hooks/useAccounts'
 import { txCostLabel } from './txCostLabels'
+import { totalPagesOf } from '~utils/pagination'
 
 interface Props {
   address: string
@@ -53,7 +54,7 @@ export const FeesTable = ({ address }: Props) => {
       {!fees.isLoading && rows.length === 0 && (
         <EmptyState title='No fees paid' hint='This account has not spent tokens on any transactions yet.' />
       )}
-      <PaginationControls page={page} totalPages={fees.data?.pagination?.totalPages} onChange={setPage} />
+      <PaginationControls page={page} totalPages={totalPagesOf(fees.data?.pagination)} onChange={setPage} />
     </>
   )
 }

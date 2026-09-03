@@ -32,10 +32,10 @@ import {
   useLatestTransfers,
   useTxTypeBreakdown,
 } from '~hooks/useChainStats'
+import { useRankedOrganizations } from '~hooks/useOrgStats'
 import {
   useChainInfo,
   useElections,
-  useOrganizations,
   useResolvedElectionTitles,
   useTransactions,
   useValidators,
@@ -68,7 +68,7 @@ const DashboardPage = () => {
   const votes = useVotes(0, ROWS)
   const txs = useTransactions(0, ROWS, undefined, undefined, undefined, IDLE_POLL_MS)
   const validators = useValidators(IDLE_POLL_MS)
-  const organizations = useOrganizations(0, 8, undefined, undefined, IDLE_POLL_MS)
+  const organizations = useRankedOrganizations()
   const accountCount = useAccountCount()
 
   // One 40-block request feeds the block-time chart and the blocks feed.
@@ -77,9 +77,10 @@ const DashboardPage = () => {
   const electionStatus = useElectionStatusBreakdown()
   const transfers = useLatestTransfers(ROWS, IDLE_POLL_MS)
 
-  const topOrganizations = [...(organizations.data?.organizations ?? [])]
-    .sort((a, b) => b.electionCount - a.electionCount)
-    .slice(0, ROWS)
+  // Ranked across the whole index, not within one response page — sorting a
+  // single page of `/chain/organizations` ranks an arbitrary window, because
+  // the endpoint returns rows in index order and accepts no sort parameter.
+  const topOrganizations = organizations.organizations.slice(0, ROWS)
 
   const electionRows = elections.data?.elections ?? []
   const { titles } = useResolvedElectionTitles(electionRows)

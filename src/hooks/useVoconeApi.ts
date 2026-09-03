@@ -334,7 +334,8 @@ export const useOrganizations = (
   limit: number,
   organizationId?: string,
   name?: string,
-  pollMs?: number
+  pollMs?: number,
+  enabled = true
 ) => {
   const { apiUrl, refreshMs } = useApi()
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
@@ -343,6 +344,7 @@ export const useOrganizations = (
   return useQuery({
     queryKey: ['organizations', apiUrl, page, limit, organizationId, name],
     queryFn: () => fetchJson<OrganizationsList>(q(apiUrl, `/chain/organizations?${params.toString()}`)),
+    enabled,
     refetchInterval: pollMs ?? refreshMs,
   })
 }

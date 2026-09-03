@@ -187,3 +187,77 @@ export const useOrgServerSearch = (query: string, gate = true) => {
     isLoading: result.isLoading,
   }
 }
+
+/**
+ * Page size for a full-index sweep. `GET /chain/organizations` caps `limit` at
+ * 100 server-side — asking for 500 or 1000 still returns 100 — so this is the
+ * fewest requests the whole index can be read in.
+ */
+export const ORG_INDEX_PAGE_SIZE = 100
+/** Hard ceiling on a full-index sweep, in requests. */
+export const ORG_INDEX_MAX_PAGES = 12
+/** How many organizations a sweep can reach before it truncates. */
+export const ORG_INDEX_DEPTH = ORG_INDEX_PAGE_SIZE * ORG_INDEX_MAX_PAGES
+
+/**
+ * The organization index, sorted by election count.
+ *
+ * `GET /chain/organizations` returns rows in the index's own order, which is
+ * neither election-count nor anything else a reader would recognise, and it
+ * accepts no ordering parameter — `sort`, `orderBy` and `sortBy` are all
+ * silently ignored, like any unknown query param. So *any* "most elections"
+ * claim has to be assembled from the whole index here: sorting one page of the
+ * response ranks an arbitrary window, not the chain. On the public LTS gateway
+ * page 0 of 275 organizations tops out at 17 elections while the real leader
+ * has 569.
+ *
+ * Page 0 is fetched first for `pagination.lastPage`, then the remaining pages
+ * fan out in parallel — three requests for today's index. The sweep is capped
+ * at {@link ORG_INDEX_MAX_PAGES} requests; past that `truncated` is set so
+ * callers can say the ranking only covers the first {@link ORG_INDEX_DEPTH}
+ * organizations rather than implying a complete one. Each page shares its
+ * cache entry with {@link useOrganizations}, and the index moves slowly enough
+ * that this never polls.
+ */
+export const useRankedOrganizations = (gate = true) => {
+  const { apiUrl } = useApi()
+
+  const pageQuery = (page: number, enabled: boolean) => ({
+    queryKey: ['organizations', apiUrl, page, ORG_INDEX_PAGE_SIZE, undefined, undefined],
+    queryFn: () =>
+      fetchJson<OrganizationsList>(q(apiUrl, `/chain/organizations?page=${page}&limit=${ORG_INDEX_PAGE_SIZE}`)),
+    enabled,
+    staleTime: ORG_STATS_STALE_MS,
+    gcTime: ORG_STATS_STALE_MS,
+    refetchInterval: false as const,
+  })
+
+  const first = useQuery(pageQuery(0, gate))
+
+  // `lastPage` is the 0-based index of the final page, so page 0 alone means
+  // lastPage === 0 and no follow-up requests.
+  const lastPage = first.data?.pagination?.lastPage ?? 0
+  const reachable = Math.min(lastPage, ORG_INDEX_MAX_PAGES - 1)
+
+  const rest = useQueries({
+    queries: Array.from({ length: Math.max(0, reachable) }, (_, i) => pageQuery(i + 1, gate && !!first.data)),
+    combine: (results) => ({
+      organizations: results.flatMap((r) => r.data?.organizations ?? []),
+      isLoading: results.some((r) => r.isPending && r.fetchStatus !== 'idle'),
+    }),
+  })
+
+  const rows = [...(first.data?.organizations ?? []), ...rest.organizations]
+  // Ties broken on the id so the order cannot jitter between refetches.
+  const organizations = rows.sort(
+    (a, b) => b.electionCount - a.electionCount || a.organizationID.localeCompare(b.organizationID)
+  )
+
+  return {
+    organizations,
+    totalItems: first.data?.pagination?.totalItems ?? organizations.length,
+    truncated: lastPage > ORG_INDEX_MAX_PAGES - 1,
+    isLoading: first.isLoading || rest.isLoading,
+    isError: first.isError,
+  }
+}
