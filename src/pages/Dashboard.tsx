@@ -32,7 +32,7 @@ import {
   useLatestTransfers,
   useTxTypeBreakdown,
 } from '~hooks/useChainStats'
-import { useRankedOrganizations } from '~hooks/useOrgStats'
+import { ORG_INDEX_DEPTH, useRankedOrganizations } from '~hooks/useOrgStats'
 import {
   useChainInfo,
   useElections,
@@ -336,7 +336,11 @@ const DashboardPage = () => {
         <GridItem minW={0}>
           <PageSection
             title='Top organizations'
-            subtitle='Ranked by number of elections created.'
+            subtitle={
+              organizations.truncated
+                ? `Ranked by number of elections created — top ${ORG_INDEX_DEPTH.toLocaleString()} of ${organizations.totalItems.toLocaleString()} organizations.`
+                : 'Ranked by number of elections created.'
+            }
             right={<SeeAll to='/accounts'>See all</SeeAll>}
             minH={PANEL_MIN_H}
           >
