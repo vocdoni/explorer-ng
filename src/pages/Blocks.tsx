@@ -12,6 +12,7 @@ import { RelativeTime } from '~components/shared/RelativeTime'
 import { TechnicalDetails } from '~components/shared/TechnicalDetails'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useBlocks, useValidators } from '~hooks/useVoconeApi'
+import { totalPagesOf } from '~utils/pagination'
 
 const DEFAULTS = { page: '0', chainId: '', hash: '', proposer: '', txs: 'all' }
 
@@ -134,7 +135,7 @@ const BlocksPage = () => {
       </PageSection>
       <PaginationControls
         page={page}
-        totalPages={blocks.data?.pagination?.totalPages}
+        totalPages={totalPagesOf(blocks.data?.pagination)}
         onChange={(next) => setState({ page: String(next) })}
       />
     </Grid>

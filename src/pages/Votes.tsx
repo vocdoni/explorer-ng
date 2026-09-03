@@ -9,6 +9,7 @@ import { RelativeTime } from '~components/shared/RelativeTime'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useVotes } from '~hooks/useVoconeApi'
+import { totalPagesOf } from '~utils/pagination'
 
 const DEFAULTS = { page: '0', electionId: '' }
 
@@ -76,7 +77,7 @@ const VotesPage = () => {
       </PageSection>
       <PaginationControls
         page={page}
-        totalPages={votes.data?.pagination?.totalPages}
+        totalPages={totalPagesOf(votes.data?.pagination)}
         onChange={(next) => setState({ page: String(next) })}
       />
     </Grid>

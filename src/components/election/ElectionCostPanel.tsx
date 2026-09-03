@@ -7,6 +7,7 @@ import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { useElectionFees } from '~hooks/useElectionAnalytics'
+import { totalPagesOf } from '~utils/pagination'
 
 interface Props {
   electionId: string
@@ -76,7 +77,7 @@ export const ElectionCostPanel = ({ electionId, page, onPageChange }: Props) => 
       {!fees.isLoading && rows.length === 0 && (
         <EmptyState title='No fees recorded' hint='No token cost has been charged against this election.' />
       )}
-      <PaginationControls page={page} totalPages={fees.data?.pagination?.totalPages} onChange={onPageChange} />
+      <PaginationControls page={page} totalPages={totalPagesOf(fees.data?.pagination)} onChange={onPageChange} />
     </PageSection>
   )
 }

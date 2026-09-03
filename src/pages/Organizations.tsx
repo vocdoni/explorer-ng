@@ -9,15 +9,25 @@ import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import type { OrgStats } from '~hooks/useOrgStats'
-import { ORG_SEARCH_DEPTH, useOrgNameSearch, useOrgServerSearch, useOrgStats } from '~hooks/useOrgStats'
+import {
+  ORG_INDEX_DEPTH,
+  ORG_SEARCH_DEPTH,
+  useOrgNameSearch,
+  useOrgServerSearch,
+  useOrgStats,
+  useRankedOrganizations,
+} from '~hooks/useOrgStats'
 import { useGatewayCapabilities } from '~hooks/useGatewayCapabilities'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useOrganizations } from '~hooks/useVoconeApi'
 import type { OrganizationSummary } from '~types/api'
+import { totalPagesOf } from '~utils/pagination'
 
 type SortKey = 'elections-desc' | 'elections-asc'
 
 const DEFAULTS = { page: '0', q: '', sort: 'elections-desc' }
+
+const PAGE_SIZE = 24
 
 /** Right-aligned numeric cell: a skeleton while its row's stats are still
  * loading, '—' with a tooltip when the id fell outside the enrichment cap. */
@@ -71,6 +81,9 @@ const OrgListRow = ({ org, stats, statsLoading, enriched }: {
   )
 }
 
+const bySort = (sort: SortKey) => (a: OrganizationSummary, b: OrganizationSummary) =>
+  sort === 'elections-desc' ? b.electionCount - a.electionCount : a.electionCount - b.electionCount
+
 /** An organization ID fragment, as opposed to words: only hex, long enough that
  *  a real word ("beadface" aside) is unlikely to be mistaken for one. */
 const looksLikeId = (value: string) => /^(0x)?[0-9a-f]{4,}$/i.test(value.trim())
@@ -111,7 +124,13 @@ const OrganizationsPage = () => {
   const serverSearch = useOrgServerSearch(nameQuery, gateway.isNew)
   const legacySearch = useOrgNameSearch(nameQuery, legacyGate)
 
-  const organizations = useOrganizations(page, 24, idFilter || undefined)
+  // Ranking by election count cannot be done on a page of the response:
+  // `/chain/organizations` returns rows in index order and accepts no sort
+  // parameter, so the whole index is swept and ordered here, then paginated
+  // locally. An ID filter keeps the server-side paging path — it narrows to a
+  // handful of rows, and there is nothing to rank across.
+  const ranked = useRankedOrganizations(!idFilter && !nameQuery)
+  const byId = useOrganizations(page, PAGE_SIZE, idFilter || undefined, undefined, undefined, !!idFilter)
 
   const search = gateway.isNew
     ? { active: serverSearch.active, rows: serverSearch.orgs, scanned: serverSearch.orgs.length, isLoading: serverSearch.isLoading }
@@ -122,13 +141,22 @@ const OrganizationsPage = () => {
         isLoading: legacySearch.isLoading,
       }
 
-  const sorted = useMemo(() => {
-    const items = search.active ? [...search.rows] : [...(organizations.data?.organizations ?? [])]
-    items.sort((a, b) =>
-      sort === 'elections-desc' ? b.electionCount - a.electionCount : a.electionCount - b.electionCount
-    )
-    return items
-  }, [organizations.data?.organizations, search.active, search.rows, sort])
+  // `ranked.organizations` is already election-count descending, so the
+  // ascending option reverses it rather than re-sorting; the search and
+  // ID-filter paths carry their own (necessarily partial) row sets.
+  const ordered = useMemo(() => {
+    if (search.active) return [...search.rows].sort(bySort(sort))
+    if (idFilter) return [...(byId.data?.organizations ?? [])].sort(bySort(sort))
+    return sort === 'elections-desc' ? ranked.organizations : [...ranked.organizations].reverse()
+  }, [search.active, search.rows, idFilter, byId.data?.organizations, ranked.organizations, sort])
+
+  // Server-side paging still applies to the ID filter; the ranked list is
+  // paginated here, over the ordered whole.
+  const paginated = !search.active && !idFilter
+  const totalPages = paginated
+    ? Math.max(1, Math.ceil(ordered.length / PAGE_SIZE))
+    : totalPagesOf(byId.data?.pagination)
+  const sorted = paginated ? ordered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE) : ordered
 
   // Balance/fees have no list-row equivalent on any gateway, so they still
   // need one `/accounts/{id}` request per row regardless of search mode —
@@ -160,7 +188,7 @@ const OrganizationsPage = () => {
   // balance/fees may still show "—" rather than block on the full fan-out.
   const enrichedIds = sorted.filter((o) => o.name !== undefined).map((o) => o.organizationID)
   const enrichedSet = new Set([...enrichedIds, ...pageStats.capped])
-  const listLoading = search.active ? search.isLoading : organizations.isLoading
+  const listLoading = search.active ? search.isLoading : idFilter ? byId.isLoading : ranked.isLoading
 
   return (
     <Grid gap={6}>
@@ -193,6 +221,15 @@ const OrganizationsPage = () => {
           Reset
         </Button>
       </Grid>
+
+      {!search.active && ranked.truncated && (
+        <HStack gap={2} fontSize='sm' color='texts.subtle'>
+          <Text>
+            This chain has more than {ORG_INDEX_DEPTH.toLocaleString()} organizations — the ranking covers the first{' '}
+            {ORG_INDEX_DEPTH.toLocaleString()} in the index, since the API cannot order them server-side.
+          </Text>
+        </HStack>
+      )}
 
       {search.active && (
         <HStack gap={2} fontSize='sm' color='texts.subtle'>
@@ -250,11 +287,7 @@ const OrganizationsPage = () => {
       </PageSection>
 
       {!search.active && (
-        <PaginationControls
-          page={page}
-          totalPages={organizations.data?.pagination?.totalPages}
-          onChange={(next) => setState({ page: String(next) })}
-        />
+        <PaginationControls page={page} totalPages={totalPages} onChange={(next) => setState({ page: String(next) })} />
       )}
     </Grid>
   )

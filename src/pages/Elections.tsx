@@ -8,6 +8,7 @@ import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useElections, useResolvedElectionTitles } from '~hooks/useVoconeApi'
+import { totalPagesOf } from '~utils/pagination'
 
 const DEFAULTS = { page: '0', status: '', organizationId: '', electionId: '' }
 
@@ -104,7 +105,7 @@ const ElectionsPage = () => {
 
       <PaginationControls
         page={page}
-        totalPages={q.data?.pagination?.totalPages}
+        totalPages={totalPagesOf(q.data?.pagination)}
         onChange={(next) => setState({ page: String(next) })}
       />
     </Grid>

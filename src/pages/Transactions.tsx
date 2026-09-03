@@ -10,6 +10,7 @@ import { PaginationControls } from '~components/shared/PaginationControls'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useTransactions } from '~hooks/useVoconeApi'
 import { TX_TYPE_OPTIONS, transactionTypeLabel, transactionTypePalette } from '~utils/txLabels'
+import { totalPagesOf } from '~utils/pagination'
 
 const DEFAULTS = { page: '0', height: '', type: '', signer: '' }
 
@@ -116,7 +117,7 @@ const TransactionsPage = () => {
       </PageSection>
       <PaginationControls
         page={page}
-        totalPages={txs.data?.pagination?.totalPages}
+        totalPages={totalPagesOf(txs.data?.pagination)}
         onChange={(next) => setState({ page: String(next) })}
       />
     </Grid>
