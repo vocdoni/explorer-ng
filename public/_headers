@@ -1,0 +1,57 @@
+# Netlify header rules. This file ships inside dist/, which is the only way
+# headers reach production: the CI workflow uploads dist/ through the Netlify
+# API, and an API deploy reads nothing outside the uploaded directory — a
+# netlify.toml [[headers]] block at the repo root would silently not apply.
+#
+# Netlify does not shadow overlapping rules: two rules matching the same path
+# CONCATENATE same-named headers into one multi-value header. So Cache-Control
+# appears below only on paths that cannot overlap, and /* carries none —
+# everything without an explicit rule keeps Netlify's default
+# `public, max-age=0, must-revalidate` (ETag revalidation), which is what
+# index.html and the SPA-fallback routes want anyway.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  # CSP notes, directive by directive:
+  # - script-src 'self': index.html loads only same-origin scripts
+  #   (/runtime-config.js and the hashed entry chunk) and nothing injects
+  #   executable inline scripts. Keep it that way — adding an inline <script>
+  #   to index.html will break under this policy.
+  # - style-src needs 'unsafe-inline': index.html has an inline <style> block
+  #   and Emotion (Chakra) injects <style> tags at runtime.
+  # - connect-src is deliberately open to https:. The gateway is
+  #   user-configurable (localStorage override in the header, runtime-config,
+  #   env — see src/contexts/ApiContext.tsx) and election metadataURL
+  #   documents live on arbitrary https hosts chosen by election creators
+  #   (src/utils/electionMetadata.ts). Pinning an origin here would break both.
+  #   localhost/127.0.0.1 over plain http stay allowed so a developer can point
+  #   the deployed explorer at a local gateway (the settings popover suggests
+  #   http://localhost:9090/v2).
+  # - img-src: https: for account/organization avatars (untrusted metadata
+  #   URLs, AddressAvatar), data: for data-URI avatars, blob: because chart
+  #   PNG export rasterizes through an <img src="blob:..."> —
+  #   src/components/election/chartExport.ts — and fails silently without it.
+  # - frame-ancestors 'none' + X-Frame-Options DENY: nothing embeds this app,
+  #   and a framed explorer invites clickjacking over the "your vote is
+  #   recorded" UI.
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+# Vite content-hashes everything under /assets/ (JS chunks, fonts, extracted
+# CSS), so a URL's content can never change — cache forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The two mutable-by-name files a stale copy of would pin users to an old
+# deploy: the document that names the current hashed assets, and the runtime
+# config hook (regenerated per-environment in the Docker deployment; kept
+# consistent here).
+/index.html
+  Cache-Control: no-cache
+
+/runtime-config.js
+  Cache-Control: no-cache
