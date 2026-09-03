@@ -218,6 +218,11 @@ export const ORG_INDEX_DEPTH = ORG_INDEX_PAGE_SIZE * ORG_INDEX_MAX_PAGES
  * organizations rather than implying a complete one. Each page shares its
  * cache entry with {@link useOrganizations}, and the index moves slowly enough
  * that this never polls.
+ *
+ * This whole sweep is a workaround for the missing ordering param, not the
+ * right layer for it — once the gateway can sort `/chain/organizations`
+ * server-side, this collapses to a single bounded request and the truncation
+ * case disappears entirely.
  */
 export const useRankedOrganizations = (gate = true) => {
   const { apiUrl } = useApi()
