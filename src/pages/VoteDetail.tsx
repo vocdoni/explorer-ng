@@ -9,12 +9,14 @@ import { RelativeTime } from '~components/shared/RelativeTime'
 import { StatTile } from '~components/shared/StatTile'
 import { TechnicalDetails, TechnicalField } from '~components/shared/TechnicalDetails'
 import { OverwriteNotice } from '~components/verify/OverwriteNotice'
+import { BallotAuthorization } from '~components/vote/BallotAuthorization'
 import { BallotContents } from '~components/vote/BallotContents'
 import { VoteJourney } from '~components/vote/VoteJourney'
 import { VoteReceiptHero } from '~components/vote/VoteReceiptHero'
 import { useHashIds } from '~hooks/useHashIds'
-import { electionMetaFrom, useElectionWithMetadata, useVote } from '~hooks/useVoconeApi'
+import { electionMetaFrom, useElectionWithMetadata, useTransactionByIndex, useVote } from '~hooks/useVoconeApi'
 import { useVoteContent } from '~hooks/useVoteContent'
+import { caProofTypeFrom } from '~utils/anonymity'
 
 const ENDED_STATUSES = ['ENDED', 'RESULTS', 'CANCELED']
 
@@ -41,6 +43,17 @@ const VoteDetailPage = () => {
   const overwriteCount = vote.data?.overwriteCount ?? 0
   const blockHeight = vote.data?.blockHeight
   const electionStatus = election.data?.status ?? ''
+
+  // The census proof only exists on the decoded transaction, not on the vote
+  // record — and for a CSP vote it is the one authoritative statement that this
+  // ballot was blind-signed. Empty strings hold the query off until both
+  // coordinates are known; `transactionIndex` is legitimately 0.
+  const txIndex = vote.data?.transactionIndex
+  const proofTx = useTransactionByIndex(
+    blockHeight !== undefined ? String(blockHeight) : '',
+    txIndex !== undefined ? String(txIndex) : ''
+  )
+  const caProofType = caProofTypeFrom(proofTx.data?.tx)
 
   // `/envelope` with nothing after the `#` — a truncated paste, or the route
   // reached by hand. Nothing to look up, so point at the two pages that help.
@@ -138,6 +151,8 @@ const VoteDetailPage = () => {
 
       <BallotContents content={content} />
 
+      <BallotAuthorization proofType={caProofType} />
+
       <OverwriteNotice overwriteCount={overwriteCount} maxVoteOverwrites={content.maxVoteOverwrites} />
 
       <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap={4}>
@@ -196,6 +211,7 @@ const VoteDetailPage = () => {
         <TechnicalField label='Transaction hash'>
           <HashDisplay value={vote.data.txHash} copyLabel='Transaction hash' full />
         </TechnicalField>
+        {caProofType && <TechnicalField label='Census proof type'>{caProofType}</TechnicalField>}
         <TechnicalField label='Vote package'>
           <JsonViewer json={vote.data.package ?? null} mt={1} />
         </TechnicalField>

@@ -3,6 +3,7 @@ import { LuCircleDot } from 'react-icons/lu'
 import { PageSection } from '~components/shared/PageSection'
 import { Tooltip } from '~components/ui/Tooltip'
 import type { Election } from '~types/api'
+import { resolveAnonymity } from '~utils/anonymity'
 import type { ElectionResultsView } from '~utils/ballotResults'
 
 interface Sentence {
@@ -150,15 +151,11 @@ const describeBallot = (election?: Election, results?: ElectionResultsView): Sen
     })
   }
 
-  const anonymous = bool(vote, 'anonymous')
-  if (anonymous !== undefined) {
-    sentences.push({
-      text: anonymous
-        ? 'Voters proved eligibility anonymously with a zero-knowledge proof, so ballots are not linked to an identity.'
-        : 'Voters signed their ballots, so each vote is linked to the voter identifier that cast it.',
-      fields: `voteMode.anonymous = ${anonymous}`,
-    })
-  }
+  // Anonymity is not one flag: `voteMode.anonymous` is the zero-knowledge mode,
+  // while a blind-CSP census carries the same guarantee through
+  // `census.censusOrigin`. Reading only the former printed the *opposite* of
+  // what happened on every blind-signature election. See `~utils/anonymity`.
+  sentences.push(...resolveAnonymity(election).sentences)
 
   const weighted = bool(vote, 'costFromWeight')
   if (weighted) {

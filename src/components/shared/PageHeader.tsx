@@ -7,6 +7,8 @@ interface Props {
   subtitle?: ReactNode
   /** Raw API status; rendered as a plain-English tag next to the title. */
   status?: string
+  /** Extra tags sitting beside the status pill (anonymity, ballot privacy, …). */
+  badges?: ReactNode
   breadcrumb?: ReactNode
   actions?: ReactNode
 }
@@ -15,7 +17,7 @@ interface Props {
  * The universal page-header pattern: 24px heading at weight 400 in a flex row,
  * immediately followed by a muted subheading.
  */
-export const PageHeader = ({ title, subtitle, status, breadcrumb, actions }: Props) => (
+export const PageHeader = ({ title, subtitle, status, badges, breadcrumb, actions }: Props) => (
   <Box mb={6}>
     {breadcrumb && <Box mb={2}>{breadcrumb}</Box>}
     <Flex justify='space-between' align='flex-start' gap={4} wrap='wrap'>
@@ -23,6 +25,7 @@ export const PageHeader = ({ title, subtitle, status, breadcrumb, actions }: Pro
         <Heading size='2xl' display='flex' gap={3} alignItems='center' flexWrap='wrap'>
           {title}
           {status && <StatusTag status={status} />}
+          {badges}
         </Heading>
         {subtitle && (
           <Text mt={2} fontSize='md' color='texts.subtle' display='flex' gap={2} alignItems='center' flexWrap='wrap'>

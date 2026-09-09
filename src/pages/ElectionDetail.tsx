@@ -20,6 +20,7 @@ import { RawResultsMatrix } from '~components/election/RawResultsMatrix'
 import { ResultsSummary } from '~components/election/ResultsSummary'
 import { TurnoutGauge } from '~components/election/TurnoutGauge'
 import { VoteActivityChart } from '~components/election/VoteActivityChart'
+import { AnonymityTag } from '~components/shared/AnonymityTag'
 import { EmptyState } from '~components/shared/EmptyState'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { PageHeader } from '~components/shared/PageHeader'
@@ -87,6 +88,7 @@ const ElectionDetailPage = () => {
       <PageHeader
         title={meta.title || shortHex(electionId, 12, 8)}
         status={election.data?.status}
+        badges={<AnonymityTag election={election.data} />}
         subtitle={
           <>
             Voting from <RelativeTime value={election.data?.startDate} mode='relative' /> until{' '}
