@@ -19,6 +19,17 @@ export const shortHex = (value?: string, left = 8, right = 6) => {
 }
 
 /**
+ * How to name an election in a sentence.
+ *
+ * The title when the metadata document gave one, otherwise the (truncated) id:
+ * a placeholder like "this election" reads as if it were the name the moment it
+ * is set in quotes or printed on a proof. Only a vote whose election has not
+ * been resolved at all falls back to the generic phrase.
+ */
+export const electionLabel = (title?: string, electionId?: string) =>
+  title ?? (electionId ? `Election ${shortHex(electionId)}` : 'this election')
+
+/**
  * Format an API timestamp for display.
  *
  * Accepts RFC3339 strings ("2026-07-28T14:07:52Z") as returned by most

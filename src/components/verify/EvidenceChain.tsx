@@ -7,7 +7,7 @@ import { HashDisplay } from '~components/shared/HashDisplay'
 import { RelativeTime } from '~components/shared/RelativeTime'
 import { StatusTag } from '~components/shared/StatusTag'
 import type { Verification } from '~hooks/useVerification'
-import { formatDate } from '~utils/format'
+import { electionLabel, formatDate, shortHex } from '~utils/format'
 
 type StepState = 'pending' | 'ok' | 'failed'
 
@@ -92,12 +92,16 @@ const CouldNotFetch = ({ what }: { what: string }) => (
  * lookup should not hold back the confirmation the voter came for.
  */
 export const EvidenceChain = ({ verification }: { verification: Verification }) => {
-  const { vote, verify, election, block, chain, electionId, voteId, electionMeta } = verification
+  const { vote, verify, election, block, chain, electionId, voteId, electionMeta, electionMetaPending } = verification
 
   const blockHeight = vote.data?.blockHeight
   const chainHeight = chain.data?.height ?? 0
   const depth = blockHeight !== undefined && chainHeight > blockHeight ? chainHeight - blockHeight : 0
-  const electionTitle = electionMeta.title ?? 'this election'
+  // Naming the election has to wait for the metadata document, not just the
+  // chain record — otherwise the step settles into a finished sentence built
+  // around a placeholder that the title would have replaced a moment later.
+  const electionNamed = election.isSuccess && !electionMetaPending
+  const electionName = electionLabel(electionMeta.title, electionId)
   const finalResults = election.data?.finalResults
 
   const steps: Step[] = [
@@ -193,15 +197,19 @@ export const EvidenceChain = ({ verification }: { verification: Verification }) 
     },
     {
       key: 'election',
-      state: election.isSuccess ? 'ok' : election.isError ? 'failed' : 'pending',
-      headline: election.isSuccess ? `Part of “${electionTitle}”` : 'Identifying the election',
+      state: electionNamed ? 'ok' : election.isError ? 'failed' : 'pending',
+      headline: !electionNamed
+        ? 'Identifying the election'
+        : electionMeta.title
+          ? `Part of “${electionMeta.title}”`
+          : `Part of election ${shortHex(electionId)}`,
       evidence: election.isError ? (
         <CouldNotFetch what='the election record' />
       ) : (
         <DetailGrid columns={{ base: 1, sm: 2 }} gap={4}>
           <DetailRow label='Election'>
             <Link asChild variant='plain'>
-              <RouterLink to={`/process/${electionId}`}>{electionTitle}</RouterLink>
+              <RouterLink to={`/process/${electionId}`}>{electionName}</RouterLink>
             </Link>
           </DetailRow>
           <DetailRow label='Election ID'>

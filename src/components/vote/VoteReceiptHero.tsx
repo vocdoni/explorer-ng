@@ -3,7 +3,7 @@ import { LuCircleCheck } from 'react-icons/lu'
 import { Link as RouterLink } from 'react-router'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { RelativeTime } from '~components/shared/RelativeTime'
-import { parseApiDate } from '~utils/format'
+import { electionLabel, parseApiDate } from '~utils/format'
 
 interface Props {
   voteId: string
@@ -20,7 +20,9 @@ interface Props {
  */
 export const VoteReceiptHero = ({ voteId, electionId, electionTitle, date, blockHeight }: Props) => {
   const cast = parseApiDate(date)
-  const election = electionTitle ?? 'this election'
+  // Elections with no metadata document are named by their id: a placeholder
+  // sitting where the title goes reads as though it were the title.
+  const election = electionLabel(electionTitle, electionId)
 
   return (
     <Box
