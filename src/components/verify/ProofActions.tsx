@@ -3,7 +3,7 @@ import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react'
 import { useRef, useState } from 'react'
 import { LuDownload, LuTriangleAlert } from 'react-icons/lu'
 import { verificationUrl, type Verification } from '~hooks/useVerification'
-import { parseApiDate, shortHex } from '~utils/format'
+import { electionLabel, parseApiDate } from '~utils/format'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -57,7 +57,7 @@ export const ProofActions = ({ verification }: { verification: Verification }) =
           data={{
             // No metadata title is common for programmatic elections; naming the
             // election by its (truncated) id beats a placeholder that says nothing.
-            electionTitle: electionMeta.title ?? `Election ${shortHex(electionId)}`,
+            electionTitle: electionLabel(electionMeta.title, electionId),
             electionId,
             voteId,
             txHash: vote.data?.txHash ?? 'unknown',

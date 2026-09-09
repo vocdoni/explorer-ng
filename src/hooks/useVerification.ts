@@ -1,6 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from '~contexts/ApiContext'
-import { electionMetaFrom, useBlock, useChainInfo, useElection, useVote } from '~hooks/useVoconeApi'
+import {
+  electionMetaFrom,
+  useBlock,
+  useChainInfo,
+  useElection,
+  useElectionMetadata,
+  useVote,
+} from '~hooks/useVoconeApi'
 import { normalizeId } from '~utils/format'
 import { fetchJson } from '~utils/http'
 
@@ -55,7 +62,13 @@ export const useVerification = (electionIdInput?: string, voteIdInput?: string) 
   const block = useBlock(blockHeight !== undefined ? String(blockHeight) : '', { poll: !complete })
   const chain = useChainInfo({ poll: !complete })
 
-  const electionMeta = electionMetaFrom(election.data?.metadata)
+  // The chain record only carries the metadata document when the gateway
+  // resolved it; elections created through the SaaS API leave it as a bare
+  // `metadataURL`, and reading `election.data.metadata` alone means their title
+  // never resolves. Metadata is immutable, so this shares the hard cache entry
+  // every other page primes and is never polled alongside the record.
+  const metadata = useElectionMetadata(electionId, election.data)
+  const electionMeta = electionMetaFrom(metadata.data ?? undefined)
   const overwriteCount = vote.data?.overwriteCount ?? 0
   const maxVoteOverwrites = Number((election.data?.tallyMode as Record<string, unknown>)?.maxVoteOverwrites ?? 0)
 
@@ -69,6 +82,8 @@ export const useVerification = (electionIdInput?: string, voteIdInput?: string) 
     block,
     chain,
     electionMeta,
+    /** The document is still on its way; the election cannot be named yet. */
+    electionMetaPending: metadata.isLoading,
     overwriteCount,
     maxVoteOverwrites: Number.isFinite(maxVoteOverwrites) ? maxVoteOverwrites : 0,
     complete,
