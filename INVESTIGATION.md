@@ -9,6 +9,16 @@ had. Fixes are in this branch.
 Probed against the default gateway from `src/contexts/ApiContext.tsx`,
 `https://api.vocdoni.io/v2`, on 2026-09-03.
 
+> **Update, 2026-09-09 — the client-side sweep described below is gone.**
+> vocdoni-node [#1451](https://github.com/vocdoni/vocdoni-node/pull/1451) added
+> `?sortBy=electionCount&order=desc` to `/chain/organizations`, which is the
+> upstream feature this report asked for. The explorer now asks the API for the
+> ranking and pages it server-side; `useRankedOrganizations`, `ORG_INDEX_*` and
+> the truncation notice no longer exist. The diagnosis below is kept as the
+> record of why the ranking cannot be built from one response page — that part
+> is still true of any gateway that predates #1451, which is why the sort
+> parameter is feature-detected (`useOrgSortSupport`) rather than assumed.
+
 ## What the symptom actually was
 
 `GET /chain/organizations` returns rows in the index's own order — not by
@@ -81,6 +91,7 @@ params are silently ignored, the same behaviour already documented for `?name=`.
 
 A `?sort=` / `?order=` on this endpoint would let the explorer drop the sweep
 entirely; worth an upstream feature request, but nothing here is a node defect.
+*(Shipped as `?sortBy=`/`?order=` in vocdoni-node #1451; the sweep is dropped.)*
 
 ## The three defects, and the fixes
 

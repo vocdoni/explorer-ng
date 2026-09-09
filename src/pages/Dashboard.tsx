@@ -32,10 +32,11 @@ import {
   useLatestTransfers,
   useTxTypeBreakdown,
 } from '~hooks/useChainStats'
-import { useRankedOrganizations } from '~hooks/useOrgStats'
+import { useOrgSortSupport } from '~hooks/useGatewayCapabilities'
 import {
   useChainInfo,
   useElections,
+  useOrganizations,
   useResolvedElectionTitles,
   useTransactions,
   useValidators,
@@ -68,7 +69,16 @@ const DashboardPage = () => {
   const votes = useVotes(0, ROWS)
   const txs = useTransactions(0, ROWS, undefined, undefined, undefined, IDLE_POLL_MS)
   const validators = useValidators(IDLE_POLL_MS)
-  const organizations = useRankedOrganizations()
+  const orgSort = useOrgSortSupport()
+  const organizations = useOrganizations(
+    0,
+    ROWS,
+    undefined,
+    undefined,
+    IDLE_POLL_MS,
+    !orgSort.isLoading,
+    orgSort.supported ? { by: 'electionCount', order: 'desc' } : undefined
+  )
   const accountCount = useAccountCount()
 
   // One 40-block request feeds the block-time chart and the blocks feed.
@@ -77,10 +87,13 @@ const DashboardPage = () => {
   const electionStatus = useElectionStatusBreakdown()
   const transfers = useLatestTransfers(ROWS, IDLE_POLL_MS)
 
-  // Ranked across the whole index, not within one response page — sorting a
-  // single page of `/chain/organizations` ranks an arbitrary window, because
-  // the endpoint returns rows in index order and accepts no sort parameter.
-  const topOrganizations = organizations.organizations.slice(0, ROWS)
+  // Ranked by the API across the whole index (`?sortBy=electionCount`), not
+  // within one response page — sorting a page here would rank an arbitrary
+  // window, since without the parameter the endpoint returns index order.
+  // On a gateway that lacks the parameter there is no ranking to show, so the
+  // panel says what it is actually showing rather than inventing one.
+  const topOrganizations = organizations.data?.organizations ?? []
+  const ranked = orgSort.supported
 
   const electionRows = elections.data?.elections ?? []
   const { titles } = useResolvedElectionTitles(electionRows)
@@ -335,8 +348,12 @@ const DashboardPage = () => {
 
         <GridItem minW={0}>
           <PageSection
-            title='Top organizations'
-            subtitle='Ranked by number of elections created.'
+            title={ranked ? 'Top organizations' : 'Organizations'}
+            subtitle={
+              ranked
+                ? 'Ranked by number of elections created.'
+                : 'This gateway cannot order organizations, so these are the first in the index.'
+            }
             right={<SeeAll to='/accounts'>See all</SeeAll>}
             minH={PANEL_MIN_H}
           >
@@ -366,7 +383,7 @@ const DashboardPage = () => {
                 </Table.Body>
               </Table.Root>
             </Table.ScrollArea>
-            {topOrganizations.length === 0 && !organizations.isLoading && (
+            {topOrganizations.length === 0 && !organizations.isLoading && !orgSort.isLoading && (
               <EmptyState title='No organizations yet' py={6} />
             )}
           </PageSection>

@@ -322,12 +322,23 @@ export const useDateToBlock = (timestamp?: string | number) => {
   })
 }
 
+/** Server-side ordering for `/chain/organizations` (vocdoni-node #1451).
+ *  `createdAt` is the creation time of the organization's oldest indexed
+ *  election, i.e. when it first appeared in the index. */
+export type OrgSortBy = 'createdAt' | 'electionCount' | 'name'
+export interface OrgSort {
+  by: OrgSortBy
+  order: 'asc' | 'desc'
+}
+
 /**
- * `name` filters server-side on gateways new enough to support it
- * (`useGatewayCapabilities`). Sending it to an older gateway is safe — an
- * unrecognized query param is simply ignored — but callers should only pass
- * it once the gateway is known-new, since an ignored filter silently returns
- * unfiltered results rather than an error.
+ * `name` filters and `sort` orders server-side, both only on gateways new
+ * enough to support them (`useGatewayCapabilities` and `useOrgSortSupport`
+ * respectively — they are separate releases, so one is not evidence of the
+ * other). Sending either to an older gateway is safe in the sense that an
+ * unrecognized query param is ignored, but that is precisely the hazard:
+ * the response is a valid 200 of unfiltered, index-ordered rows rather than
+ * an error, so callers must feature-detect before passing them.
  */
 export const useOrganizations = (
   page: number,
@@ -335,14 +346,19 @@ export const useOrganizations = (
   organizationId?: string,
   name?: string,
   pollMs?: number,
-  enabled = true
+  enabled = true,
+  sort?: OrgSort
 ) => {
   const { apiUrl, refreshMs } = useApi()
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (organizationId) params.set('organizationId', organizationId)
   if (name) params.set('name', name)
+  if (sort) {
+    params.set('sortBy', sort.by)
+    params.set('order', sort.order)
+  }
   return useQuery({
-    queryKey: ['organizations', apiUrl, page, limit, organizationId, name],
+    queryKey: ['organizations', apiUrl, page, limit, organizationId, name, sort?.by, sort?.order],
     queryFn: () => fetchJson<OrganizationsList>(q(apiUrl, `/chain/organizations?${params.toString()}`)),
     enabled,
     refetchInterval: pollMs ?? refreshMs,
