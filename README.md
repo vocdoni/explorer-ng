@@ -75,7 +75,7 @@ monitoring view for validator status.
 
 ## Quickstart
 
-Requires Node.js 20+ and [pnpm](https://pnpm.io) (`corepack enable` picks up the version pinned in
+Requires Node.js 22.12+ and [pnpm](https://pnpm.io) (`corepack enable` picks up the version pinned in
 `package.json`).
 
 ```bash
