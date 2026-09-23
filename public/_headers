@@ -26,6 +26,11 @@
   #   layout engine, which the vote-proof download (ProofActions.tsx) loads
   #   on click and instantiates as WebAssembly — narrower than 'unsafe-eval',
   #   it permits WASM execution only and does not enable eval() of JS.
+  # - worker-src 'self' blob: exists only because @react-pdf/renderer spins
+  #   its renderer up as a Worker constructed from a blob: URL; without an
+  #   explicit worker-src, browsers fall back to script-src for worker
+  #   creation, which does not include blob: and blocks the download. Scoping
+  #   it to its own directive avoids adding blob: to script-src itself.
   # - style-src needs 'unsafe-inline': index.html has an inline <style> block
   #   and Emotion (Chakra) injects <style> tags at runtime.
   # - connect-src is deliberately open to https:. The gateway is
@@ -45,7 +50,7 @@
   # - frame-ancestors 'none' + X-Frame-Options DENY: nothing embeds this app,
   #   and a framed explorer invites clickjacking over the "your vote is
   #   recorded" UI.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src https: http://localhost:* http://127.0.0.1:* data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src https: http://localhost:* http://127.0.0.1:* data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 
 # Vite content-hashes everything under /assets/ (JS chunks, fonts, extracted
 # CSS), so a URL's content can never change — cache forever.
