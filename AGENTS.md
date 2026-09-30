@@ -44,10 +44,13 @@ those rule tables instead of adding a second mapping elsewhere.
 
 ## Testing Guidelines
 
-Vitest. The suite is deliberately small: it covers `src/utils/legacyUrl.ts`, the table that rewrites
-every legacy URL form the previous explorer produced. Nothing in the app links to those paths, so a
-wrong rewrite is invisible until someone follows an old link or QR code — each case is pinned
-individually in the test file rather than inferred from behavior. `pnpm lint` (type-check + ESLint at
+Vitest, with `*.test.ts` files next to their module. The suite is deliberately small and pins pure
+functions whose failures the UI would hide. `src/utils/legacyUrl.ts` is the table that rewrites every
+legacy URL form the previous explorer produced. Nothing in the app links to those paths, so a wrong
+rewrite is invisible until someone follows an old link or QR code. Each case is pinned individually in
+the test file rather than inferred from behavior. `src/utils/anonymity.ts` decides whether an election
+is described as ZK- or blind-CSP-anonymous, and a mistake there silently mislabels it. Run one file
+with `pnpm test <path>`, or filter by test name with `pnpm test -t '<name>'`. `pnpm lint` (type-check + ESLint at
 zero warnings) is the other automated gate. CI runs `pnpm lint` and `pnpm test` before `pnpm build`
 (`vite build` itself does not type-check), so run both locally before pushing. `pnpm check:results`
 is a separate, manual regression check for the ballot-results adapter (`src/utils/ballotResults.ts`)

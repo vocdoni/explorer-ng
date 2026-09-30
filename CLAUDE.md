@@ -10,14 +10,26 @@ pnpm dev           # vite dev server on :3000
 pnpm build         # chakra typegen + vite build -> dist/
 pnpm lint          # tsc --noEmit + eslint, --max-warnings 0
 pnpm test          # vitest, single run
+pnpm test:watch    # vitest, watching
 pnpm preview       # serve the production build on :4173
+pnpm check:results # replay real elections through the results adapter (Node >= 22.18, hits the network)
+
+pnpm test src/utils/legacyUrl.test.ts   # one test file
+pnpm test -t 'resolveAnonymity'         # tests whose name matches
 ```
 
-Equivalent `make` targets exist (`install`, `dev`, `build`, `lint`, `preview`, `docker-*`).
+The repo pins `pnpm@11` (`packageManager`). `pnpm-workspace.yaml` holds only settings (`allowBuilds`,
+`overrides`) and has no `packages:` key. Older pnpm versions reject it with `packages field missing or
+empty`, even for `pnpm --version`. Use corepack or pnpm >= 11, not a fix to the yaml.
 
-The test suite is vitest and deliberately small: it covers `src/utils/legacyUrl.ts` — the legacy-URL
-redirect table, which nothing in the app links to and whose failures are invisible until someone
-follows an old link — and nothing else. `pnpm lint` (type-check + ESLint at zero warnings) is the
+Equivalent `make` targets exist (`install` — which uses `--frozen-lockfile`, `dev`, `build`, `lint`,
+`test`, `preview`, `docker-*`).
+
+The test suite is vitest and deliberately small: it pins pure functions whose failures would be
+invisible in the UI. `src/utils/legacyUrl.test.ts` covers the legacy-URL redirect table, which nothing
+in the app links to, so a bad rewrite only shows up when someone follows an old link. `src/utils/anonymity.test.ts`
+covers `resolveAnonymity`: a wrong answer there silently mislabels how an election protects its voters.
+Tests are colocated as `*.test.ts` next to their module. `pnpm lint` (type-check + ESLint at zero warnings) is the
 other automated gate. The Netlify workflow runs `pnpm lint` and `pnpm test` before `pnpm build`
 (`vite build` itself does not type-check), so run both locally before pushing.
 
@@ -28,6 +40,10 @@ variants and token names are type-checked against that generated output.
 Code style is Prettier-shaped and enforced only by convention: no semicolons, single quotes (including
 JSX string props), 120-column lines. TypeScript is `strict` with `noUnusedLocals`/`noUnusedParameters`,
 so dead imports and unused params fail `pnpm lint`.
+
+Commits follow Conventional Commits (`feat:`, `fix:`, `chore(deps):`, `ci:`, `test:`, `docs:`), one
+concern each. `main` auto-deploys a Netlify preview; `lts` is the production branch. `AGENTS.md` is the
+contributor-facing summary of this file; keep the two consistent when changing either.
 
 ## Architecture
 
@@ -69,6 +85,16 @@ Three behaviours in this layer encode real API quirks — preserve them:
 - **Immutable resources are never polled.** Election metadata (`useElectionMetadata`, 30 min stale/gc),
   recorded votes, encryption keys, and `useVoteVerify` (`staleTime: Infinity`, `retry: false`) are all
   fetch-once. Only live chain state carries `refetchInterval: refreshMs`.
+
+`/chain/stats` (`useChainStats`) is relied on unconditionally, and so is the `?name=` organization
+filter. Both ship on the production gateway. The dashboard donuts are built from **every** key the endpoint
+returns, never a fixed list, so they add up to `chain/info`'s totals (`txCountByType` sums to
+`transactionCount`). New tx types need a label in `txLabels.ts`. `?name=` folds ASCII case only, so accents
+must match. `?sortBy=` is the one parameter still feature-detected (`useOrgSortSupport` in
+`src/hooks/useGatewayCapabilities.ts`): an old gateway *ignores* it and answers 200 in index order, which
+would render as a false "most elections" ranking. So the probe sends an invalid `sortBy` and treats only a
+400 as proof it is honoured. Optional row fields (`title`, `name`/`avatar`, `blockTime`,
+`keyRevealHeight`) are used when present, with per-row fallbacks otherwise.
 
 `useElectionTitles` batches per-row title lookups through `useQueries`, sharing the
 `election-metadata` cache key with `useElectionMetadata`, and **caps the id list at 24** — there is no bulk-metadata endpoint,
@@ -161,6 +187,11 @@ evidence chain renders its own spinner and its own failure, so a gateway that ca
 `/chain/blocks/{n}` degrades one step instead of blanking a voter's proof. Identifiers are normalised
 (`normalizeId`: strip `0x`, trim, lowercase) because they arrive from QR scans and hand typing.
 
+`src/utils/anonymity.ts` (`resolveAnonymity`) decides what the UI says about voter anonymity. Two
+unrelated mechanisms exist, and reading only one mislabels elections that use the other.
+`zk` is a vote mode (`voteMode.anonymous`). `blind-csp` is a census origin, where the CSP signs a
+blinded request, as with `OFF_CHAIN_CA*` censuses. Any anonymity wording belongs in that module.
+
 ### Routing and pages
 
 Path router (`createBrowserRouter`) with lazy-loaded pages; every host must answer unknown paths with
@@ -207,6 +238,28 @@ Raw API enums are translated to plain English in exactly one place each: `status
 `StatusTag.tsx` (substring rules, so `READY` and `READY_FOR_VOTE` land on the same tone) and
 `txTypeMeaning`/`txCostLabel` in `src/utils/txLabels.ts` and `src/components/account/txCostLabels.ts`.
 Extend the rule tables; don't add a second mapping at a call site.
+
+### Deployment and the CSP
+
+Two deploy targets serve the same `dist/`. Netlify is deployed by `.github/workflows/deploy-netlify.yml`
+through the API. The Docker image uses nginx (`docker/`), and `docker/entrypoint.sh` writes
+`runtime-config.js` at start. On Netlify, response headers come **only** from `public/_headers`,
+because an API deploy reads nothing outside `dist/` and a `netlify.toml` `[[headers]]` block would
+silently not apply. Netlify concatenates same-named headers when rules overlap, which is why
+`Cache-Control` appears only on non-overlapping paths. The nginx config sets its own, smaller header set
+with no CSP, so a header change usually needs making in both places.
+
+The CSP in `_headers` is strict, and each directive is justified inline. It constrains code:
+
+- `script-src 'self'`: no inline `<script>` in `index.html`, ever.
+- `@react-pdf/renderer` (the vote-proof PDF in `src/components/verify/ProofActions.tsx`) is the reason
+  for `'wasm-unsafe-eval'`, `worker-src blob:` and `data:` in `connect-src`. It is loaded via dynamic
+  `import()` on click, never at route load; keep it that way.
+- `connect-src https:` is open on purpose (a user-configurable gateway, and untrusted `metadataURL`
+  hosts). `img-src blob:` exists for chart PNG export.
+
+A new third-party fetch, worker, WASM module or embed will fail in production but work under
+`pnpm dev`, which serves no CSP. Update the policy and its comment together.
 
 ### Imports
 
