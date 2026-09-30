@@ -18,6 +18,8 @@ const TX_TYPES: Record<string, TxTypeMeaning> = {
   setAccount: { label: 'Account update', family: 'account' },
   createAccount: { label: 'Account created', family: 'account' },
   mintTokens: { label: 'Tokens minted', family: 'tokens' },
+  collectFaucet: { label: 'Faucet claim', family: 'tokens' },
+  admin: { label: 'Admin action', family: 'other' },
   setSIK: { label: 'Voter key registered', family: 'account' },
   registerSIK: { label: 'Voter key registered', family: 'account' },
 }

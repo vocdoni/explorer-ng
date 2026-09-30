@@ -1,26 +1,14 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useApi } from '~contexts/ApiContext'
-import type { BlockListItem, ElectionsList, TransactionsList } from '~types/api'
+import type { BlockListItem } from '~types/api'
 import type { TransfersList } from '~hooks/useAccounts'
-import { useGatewayCapabilities } from '~hooks/useGatewayCapabilities'
-import { useBlocks } from '~hooks/useVoconeApi'
-import { transactionTypeLabel } from '~utils/txLabels'
+import { useBlocks, useChainStats } from '~hooks/useVoconeApi'
+import { statusMeaning } from '~components/shared/StatusTag'
+import { txTypeMeaning, type TxFamily } from '~utils/txLabels'
 import { fetchJson } from '~utils/http'
 import { parseApiDate } from '~utils/format'
 
 const q = (base: string, path: string) => `${base}${path}`
-
-/**
- * Breakdown queries lean on a single property of the API: `pagination.totalItems`
- * respects the list filters. So `?limit=1&type=vote` returns one throwaway row
- * plus an exact total — a full census of the chain for the price of the smallest
- * possible response. There is no aggregation endpoint; this is the cheap
- * substitute for one.
- *
- * Totals move slowly relative to a dashboard glance, so they are cached for five
- * minutes rather than polled at the page refresh interval.
- */
-const BREAKDOWN_STALE_MS = 5 * 60 * 1000
 
 export interface BreakdownSlice {
   key: string
@@ -30,133 +18,92 @@ export interface BreakdownSlice {
 }
 
 /** Transaction families follow `~utils/txLabels`: vote green, election blue,
- *  account gray, tokens orange. Two shades per family keep sibling types apart
- *  without introducing a hue the design system does not already use. */
-const TX_TYPE_SLICES: Array<{ key: string; color: string }> = [
-  { key: 'vote', color: '#22c55e' },
-  { key: 'setProcess', color: '#3b82f6' },
-  { key: 'newProcess', color: '#60a5fa' },
-  { key: 'setAccount', color: '#a1a1aa' },
-  { key: 'registerSIK', color: '#d4d4d8' },
-  { key: 'sendTokens', color: '#f97316' },
-]
+ *  account gray, tokens orange, anything else a darker neutral. Sibling types
+ *  within a family take successive shades, so they stay apart without
+ *  introducing a hue the design system does not already use. */
+const TX_FAMILY_SHADES: Record<TxFamily, string[]> = {
+  vote: ['#22c55e', '#86efac'],
+  election: ['#3b82f6', '#60a5fa', '#93c5fd'],
+  account: ['#a1a1aa', '#d4d4d8', '#e4e4e7'],
+  tokens: ['#f97316', '#fdba74', '#fed7aa'],
+  other: ['#71717a', '#52525b', '#3f3f46'],
+}
 
 /** Status hues mirror `StatusTag`: green voting open, blue results published,
- *  yellow paused, gray closed, red canceled. */
-const ELECTION_STATUS_SLICES: Array<{ key: string; label: string; color: string }> = [
-  { key: 'READY', label: 'Voting open', color: '#22c55e' },
-  { key: 'RESULTS', label: 'Results published', color: '#3b82f6' },
-  { key: 'PAUSED', label: 'Paused', color: '#eab308' },
-  { key: 'ENDED', label: 'Closed', color: '#a1a1aa' },
-  { key: 'CANCELED', label: 'Canceled', color: '#ef4444' },
-]
+ *  yellow paused, gray closed, red canceled. Labels come from `statusMeaning`. */
+const ELECTION_STATUS_COLORS: Record<string, string> = {
+  READY: '#22c55e',
+  RESULTS: '#3b82f6',
+  PAUSED: '#eab308',
+  ENDED: '#a1a1aa',
+  CANCELED: '#ef4444',
+}
+const UNKNOWN_STATUS_COLOR = '#71717a'
 
 export interface Breakdown {
   slices: BreakdownSlice[]
   total: number
   isLoading: boolean
+  isError: boolean
 }
 
-/** Zero-count buckets are dropped rather than rendered: a donut segment of size
- *  zero is invisible anyway, and its legend entry is pure noise. */
+/**
+ * Every bucket the endpoint reports becomes a slice — none is filtered through a
+ * list of types known in advance, so the ring always sums to the chain-wide
+ * total it claims to split (`/chain/stats` omits zero buckets itself, and a
+ * zero-size segment would be invisible anyway). Largest first.
+ */
 const toBreakdown = (
-  slices: Array<{ key: string; label: string; color: string }>,
-  counts: Array<number | undefined>,
-  isLoading: boolean
+  counts: Record<string, number> | undefined,
+  describe: (key: string, rank: number) => { label: string; color: string },
+  isLoading: boolean,
+  isError: boolean
 ): Breakdown => {
-  const resolved = slices
-    .map((slice, i) => ({ ...slice, value: counts[i] ?? 0 }))
-    .filter((slice) => slice.value > 0)
-    .sort((a, b) => b.value - a.value)
+  const slices = Object.entries(counts ?? {})
+    .filter(([, value]) => value > 0)
+    .sort(([, a], [, b]) => b - a)
+    .map(([key, value], rank) => ({ key, value, ...describe(key, rank) }))
   return {
-    slices: resolved,
-    total: resolved.reduce((sum, slice) => sum + slice.value, 0),
+    slices,
+    total: slices.reduce((sum, slice) => sum + slice.value, 0),
     isLoading,
+    isError,
   }
 }
 
-/**
- * Every transaction ever recorded, grouped by what it actually did.
- *
- * On a gateway new enough to expose `GET /chain/stats`, this reads straight
- * off `txCountByType` — the single probe already paid for elsewhere covers
- * it, so no further request is made. Older gateways fall back to one tiny
- * `limit=1` request per type (6), and that fan-out only starts once the
- * capability probe itself has settled, so the two paths never race.
- */
+/** Every transaction ever recorded, grouped by what it actually did. */
 export const useTxTypeBreakdown = (): Breakdown => {
-  const { apiUrl } = useApi()
-  const gateway = useGatewayCapabilities()
-  const legacyEnabled = !gateway.isLoading && !gateway.isNew
-  const legacy = useQueries({
-    queries: TX_TYPE_SLICES.map(({ key }) => ({
-      queryKey: ['tx-type-count', apiUrl, key],
-      queryFn: async () => {
-        const list = await fetchJson<TransactionsList>(q(apiUrl, `/chain/transactions?limit=1&type=${key}`))
-        return list.pagination?.totalItems ?? 0
-      },
-      enabled: legacyEnabled,
-      staleTime: BREAKDOWN_STALE_MS,
-      gcTime: BREAKDOWN_STALE_MS,
-      retry: false,
-    })),
-    combine: (results) =>
-      toBreakdown(
-        TX_TYPE_SLICES.map(({ key, color }) => ({ key, label: transactionTypeLabel(key), color })),
-        results.map((r) => r.data),
-        results.some((r) => r.isLoading)
-      ),
+  const stats = useChainStats()
+  const counts = stats.data?.txCountByType
+  // Shades are handed out per family in slice order, so the biggest type of
+  // each family gets its family's base color.
+  const sorted = Object.entries(counts ?? {}).sort(([, a], [, b]) => b - a)
+  const shadeOf: Record<string, string> = {}
+  const used: Partial<Record<TxFamily, number>> = {}
+  sorted.forEach(([key]) => {
+    const family = txTypeMeaning(key).family
+    const shades = TX_FAMILY_SHADES[family]
+    const i = used[family] ?? 0
+    shadeOf[key] = shades[i % shades.length]
+    used[family] = i + 1
   })
-
-  if (gateway.isNew && gateway.stats) {
-    return toBreakdown(
-      TX_TYPE_SLICES.map(({ key, color }) => ({ key, label: transactionTypeLabel(key), color })),
-      TX_TYPE_SLICES.map(({ key }) => gateway.stats?.txCountByType?.[key]),
-      false
-    )
-  }
-  return legacy
+  return toBreakdown(
+    counts,
+    (key) => ({ label: txTypeMeaning(key).label, color: shadeOf[key] }),
+    stats.isLoading,
+    stats.isError
+  )
 }
 
-/**
- * Every election ever created, grouped by where it is in its lifecycle.
- *
- * Same feature-detection as {@link useTxTypeBreakdown}: `electionCountByStatus`
- * from `/chain/stats` when available, otherwise one `limit=1` request per
- * status (5), deferred until the capability probe has an answer.
- */
+/** Every election ever created, grouped by where it is in its lifecycle. */
 export const useElectionStatusBreakdown = (): Breakdown => {
-  const { apiUrl } = useApi()
-  const gateway = useGatewayCapabilities()
-  const legacyEnabled = !gateway.isLoading && !gateway.isNew
-  const legacy = useQueries({
-    queries: ELECTION_STATUS_SLICES.map(({ key }) => ({
-      queryKey: ['election-status-count', apiUrl, key],
-      queryFn: async () => {
-        const list = await fetchJson<ElectionsList>(q(apiUrl, `/elections?limit=1&status=${key}`))
-        return list.pagination?.totalItems ?? 0
-      },
-      enabled: legacyEnabled,
-      staleTime: BREAKDOWN_STALE_MS,
-      gcTime: BREAKDOWN_STALE_MS,
-      retry: false,
-    })),
-    combine: (results) =>
-      toBreakdown(
-        ELECTION_STATUS_SLICES,
-        results.map((r) => r.data),
-        results.some((r) => r.isLoading)
-      ),
-  })
-
-  if (gateway.isNew && gateway.stats) {
-    return toBreakdown(
-      ELECTION_STATUS_SLICES,
-      ELECTION_STATUS_SLICES.map(({ key }) => gateway.stats?.electionCountByStatus?.[key]),
-      false
-    )
-  }
-  return legacy
+  const stats = useChainStats()
+  return toBreakdown(
+    stats.data?.electionCountByStatus,
+    (key) => ({ label: statusMeaning(key).label, color: ELECTION_STATUS_COLORS[key] ?? UNKNOWN_STATUS_COLOR }),
+    stats.isLoading,
+    stats.isError
+  )
 }
 
 export interface ActivityPoint {
@@ -215,32 +162,10 @@ export const useBlockActivity = (limit = 40): BlockActivity => {
  * Total number of accounts that exist on chain. Distinct from
  * `chain/info.organizationCount`, which counts only the accounts that have
  * created at least one election.
- *
- * Reads `accountCount` off `/chain/stats` when the gateway exposes it —
- * folding this into the same probe used by the breakdown donuts — and falls
- * back to the `limit=1` counting trick on older gateways, again deferred
- * until the probe itself has settled.
  */
 export const useAccountCount = () => {
-  const { apiUrl } = useApi()
-  const gateway = useGatewayCapabilities()
-  const legacyEnabled = !gateway.isLoading && !gateway.isNew
-  const legacy = useQuery({
-    queryKey: ['account-count', apiUrl],
-    queryFn: async () => {
-      const list = await fetchJson<{ pagination?: { totalItems?: number } }>(q(apiUrl, '/accounts?limit=1'))
-      return list.pagination?.totalItems ?? 0
-    },
-    enabled: legacyEnabled,
-    staleTime: BREAKDOWN_STALE_MS,
-    gcTime: BREAKDOWN_STALE_MS,
-    retry: false,
-  })
-
-  if (gateway.isNew && gateway.stats) {
-    return { ...legacy, data: gateway.stats.accountCount, isLoading: false, isSuccess: true }
-  }
-  return legacy
+  const stats = useChainStats()
+  return { ...stats, data: stats.data?.accountCount }
 }
 
 /**

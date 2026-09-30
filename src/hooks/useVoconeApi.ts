@@ -5,6 +5,7 @@ import type {
   Block,
   BlockList,
   ChainInfo,
+  ChainStats,
   CountResult,
   Election,
   ElectionMetadata,
@@ -39,6 +40,21 @@ export const useChainInfo = (options?: PollOption) => {
     queryKey: ['chain-info', apiUrl],
     queryFn: () => fetchJson<ChainInfo>(q(apiUrl, '/chain/info')),
     refetchInterval: poll ? refreshMs : false,
+  })
+}
+
+/**
+ * Chain-wide aggregates: transactions by type, elections by status, the account
+ * total. Live chain state, so it rides the shared poll like `useChainInfo` —
+ * the dashboard renders these next to that endpoint's totals, and a slower
+ * cadence would let the two visibly disagree.
+ */
+export const useChainStats = () => {
+  const { apiUrl, refreshMs } = useApi()
+  return useQuery({
+    queryKey: ['chain-stats', apiUrl],
+    queryFn: () => fetchJson<ChainStats>(q(apiUrl, '/chain/stats')),
+    refetchInterval: refreshMs,
   })
 }
 
@@ -332,13 +348,11 @@ export interface OrgSort {
 }
 
 /**
- * `name` filters and `sort` orders server-side, both only on gateways new
- * enough to support them (`useGatewayCapabilities` and `useOrgSortSupport`
- * respectively — they are separate releases, so one is not evidence of the
- * other). Sending either to an older gateway is safe in the sense that an
- * unrecognized query param is ignored, but that is precisely the hazard:
- * the response is a valid 200 of unfiltered, index-ordered rows rather than
- * an error, so callers must feature-detect before passing them.
+ * `name` filters server-side (a case-insensitive substring of the organization
+ * name, ASCII-only folding — accents must match). `sort` orders server-side,
+ * but only on gateways that support it (`useOrgSortSupport`): an older gateway
+ * ignores the unrecognized param and answers a valid 200 in index order rather
+ * than an error, so callers must feature-detect before passing it.
  */
 export const useOrganizations = (
   page: number,
