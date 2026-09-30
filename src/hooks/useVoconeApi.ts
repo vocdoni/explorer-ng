@@ -70,6 +70,12 @@ export interface ElectionFilters {
   startDateBefore?: string
   endDateAfter?: string
   endDateBefore?: string
+  /** Case-insensitive title substring. Needs vocdoni-node #1485
+   *  (`useElectionSortSupport`); older gateways ignore it and match everything. */
+  title?: string
+  /** Server-side ordering, same release and caveat as `title`. */
+  sortBy?: 'createdAt' | 'startDate' | 'endDate' | 'voteCount' | 'title'
+  order?: 'asc' | 'desc'
 }
 
 const ELECTION_FILTER_KEYS = [
@@ -81,13 +87,22 @@ const ELECTION_FILTER_KEYS = [
   'startDateBefore',
   'endDateAfter',
   'endDateBefore',
+  'title',
+  'sortBy',
+  'order',
 ] as const satisfies ReadonlyArray<keyof ElectionFilters>
 
 /** `pollMs` lets a caller override the shared 15s refresh with a slower
  *  interval (e.g. the Dashboard's "recent elections" panel, which does not
  *  need list-page freshness) without changing the default for every other
  *  caller of this hook. */
-export const useElections = (page: number, limit: number, filters: ElectionFilters = {}, pollMs?: number) => {
+export const useElections = (
+  page: number,
+  limit: number,
+  filters: ElectionFilters = {},
+  pollMs?: number,
+  enabled = true
+) => {
   const { apiUrl, refreshMs } = useApi()
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   ELECTION_FILTER_KEYS.forEach((key) => {
@@ -98,6 +113,7 @@ export const useElections = (page: number, limit: number, filters: ElectionFilte
   return useQuery({
     queryKey: ['elections', apiUrl, query],
     queryFn: () => fetchJson<ElectionsList>(q(apiUrl, `/elections?${query}`)),
+    enabled,
     refetchInterval: pollMs ?? refreshMs,
   })
 }
@@ -360,8 +376,10 @@ export const useDateToBlock = (timestamp?: string | number) => {
 
 /** Server-side ordering for `/chain/organizations` (vocdoni-node #1451).
  *  `createdAt` is the creation time of the organization's oldest indexed
- *  election, i.e. when it first appeared in the index. */
-export type OrgSortBy = 'createdAt' | 'electionCount' | 'name'
+ *  election, i.e. when it first appeared in the index; `lastElection`, of its
+ *  newest. `lastElection`, `voteCount` and `balance` need vocdoni-node #1485
+ *  (`useOrgStatsSortSupport`). */
+export type OrgSortBy = 'createdAt' | 'electionCount' | 'name' | 'lastElection' | 'voteCount' | 'balance'
 export interface OrgSort {
   by: OrgSortBy
   order: 'asc' | 'desc'

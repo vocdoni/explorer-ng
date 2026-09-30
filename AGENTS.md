@@ -92,10 +92,13 @@ Three behaviours in this layer encode real API quirks — preserve them:
 filter. Both ship on the production gateway. The dashboard donuts are built from **every** key the endpoint
 returns, never a fixed list, so they add up to `chain/info`'s totals (`txCountByType` sums to
 `transactionCount`). New tx types need a label in `txLabels.ts`. `?name=` folds ASCII case only, so accents
-must match. `?sortBy=` is the one parameter still feature-detected (`useOrgSortSupport` in
-`src/hooks/useGatewayCapabilities.ts`): an old gateway *ignores* it and answers 200 in index order, which
-would render as a false "most elections" ranking. So the probe sends an invalid `sortBy` and treats only a
-400 as proof it is honoured. Optional row fields (`title`, `name`/`avatar`, `blockTime`,
+must match. Sorting is still feature-detected, in `src/hooks/useGatewayCapabilities.ts`, because an old
+gateway *ignores* an unknown `sortBy` (or `title`) and answers 200 with unsorted, unfiltered rows, which
+would render as a false ranking or a false match count. `useOrgSortSupport` and `useElectionSortSupport`
+send an invalid `sortBy` and treat only a 400 as proof it is honoured. `useOrgStatsSortSupport` (the
+`lastElection`/`voteCount`/`balance` orderings of vocdoni-node #1485) needs a 200 *and* the `voteCount`
+row field, since a pre-sorting gateway also answers 200. Nothing gated is sent or offered until its probe
+settles, and a URL naming an unsupported sort falls back to the default. Optional row fields (`title`, `name`/`avatar`, `blockTime`,
 `keyRevealHeight`) are used when present, with per-row fallbacks otherwise.
 
 `useElectionTitles` batches per-row title lookups through `useQueries`, sharing the

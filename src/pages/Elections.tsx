@@ -6,6 +6,7 @@ import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { PageHeader } from '~components/shared/PageHeader'
 import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
+import { useElectionSortSupport } from '~hooks/useGatewayCapabilities'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { type ElectionFilters, useElections, useResolvedElectionTitles } from '~hooks/useVoconeApi'
 import { totalPagesOf } from '~utils/pagination'
@@ -20,12 +21,29 @@ const DEFAULTS = {
   startTo: '',
   endFrom: '',
   endTo: '',
+  title: '',
+  sort: 'created-desc',
 }
 
-type Draft = Omit<typeof DEFAULTS, 'page'>
+/** Orderings `GET /elections` can apply server-side (vocdoni-node #1485). */
+const SORTS = {
+  'created-desc': { label: 'Newest', sortBy: 'createdAt', order: 'desc' },
+  'created-asc': { label: 'Oldest', sortBy: 'createdAt', order: 'asc' },
+  'votes-desc': { label: 'Most votes', sortBy: 'voteCount', order: 'desc' },
+  'start-desc': { label: 'Latest start date', sortBy: 'startDate', order: 'desc' },
+  'end-desc': { label: 'Latest end date', sortBy: 'endDate', order: 'desc' },
+  'end-asc': { label: 'Earliest end date', sortBy: 'endDate', order: 'asc' },
+  'title-asc': { label: 'Title, A to Z', sortBy: 'title', order: 'asc' },
+} satisfies Record<string, { label: string } & Required<Pick<ElectionFilters, 'sortBy' | 'order'>>>
+
+type SortKey = keyof typeof SORTS
+const isSortKey = (value: string): value is SortKey => value in SORTS
+
+type Draft = Omit<typeof DEFAULTS, 'page' | 'sort'>
 const draftOf = (state: typeof DEFAULTS): Draft => {
   const draft: Partial<typeof DEFAULTS> = { ...state }
   delete draft.page
+  delete draft.sort
   return draft as Draft
 }
 
@@ -33,7 +51,9 @@ const draftOf = (state: typeof DEFAULTS): Draft => {
 const dayStart = (day: string) => (day ? `${day}T00:00:00Z` : undefined)
 const dayEnd = (day: string) => (day ? `${day}T23:59:59Z` : undefined)
 
-const filtersOf = (s: Draft): ElectionFilters => ({
+/** `title` is only sent to a gateway that has proven it filters by it: an older
+ *  one ignores the parameter and would return every election as a match. */
+const filtersOf = (s: Draft, sorting: boolean): ElectionFilters => ({
   status: s.status || undefined,
   organizationId: s.organizationId || undefined,
   electionId: s.electionId || undefined,
@@ -42,6 +62,7 @@ const filtersOf = (s: Draft): ElectionFilters => ({
   startDateBefore: dayEnd(s.startTo),
   endDateAfter: dayStart(s.endFrom),
   endDateBefore: dayEnd(s.endTo),
+  title: sorting ? s.title || undefined : undefined,
 })
 
 const DateBound = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
@@ -77,7 +98,20 @@ const ElectionsPage = () => {
     setDraft(JSON.parse(appliedKey) as Draft)
   }, [appliedKey])
 
-  const q = useElections(page, 20, filtersOf(applied))
+  // Sorting and the title filter ship together and are silently ignored by
+  // older gateways, so neither is sent, nor offered, until the probe answers.
+  const sorting = useElectionSortSupport()
+  const sort: SortKey = sorting.supported && isSortKey(state.sort) ? state.sort : 'created-desc'
+  const { sortBy, order } = SORTS[sort]
+  const q = useElections(
+    page,
+    20,
+    sorting.supported ? { ...filtersOf(applied, true), sortBy, order } : filtersOf(applied, false),
+    undefined,
+    // Waiting for the probe keeps a `?title=` link from first rendering every
+    // election, unfiltered, under a filter the URL says is applied.
+    !sorting.isLoading
+  )
   const elections = q.data?.elections ?? []
   const { titles } = useResolvedElectionTitles(elections)
 
@@ -116,6 +150,30 @@ const ElectionsPage = () => {
             onChange={(e) => edit('organizationId')(e.target.value)}
           />
           <Input placeholder='Election ID' value={draft.electionId} onChange={(e) => edit('electionId')(e.target.value)} />
+          {sorting.supported && (
+            <>
+              <Input
+                placeholder='Title contains'
+                aria-label='Title contains'
+                value={draft.title}
+                onChange={(e) => edit('title')(e.target.value)}
+              />
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  aria-label='Sort elections'
+                  value={sort}
+                  onChange={(e) => setState({ sort: e.target.value, page: DEFAULTS.page })}
+                >
+                  {Object.entries(SORTS).map(([key, { label }]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </>
+          )}
         </Grid>
         <Grid templateColumns={{ base: '1fr 1fr', md: 'repeat(4, 1fr)' }} gap={2}>
           <DateBound label='Starts on or after' value={draft.startFrom} onChange={edit('startFrom')} />
@@ -131,7 +189,7 @@ const ElectionsPage = () => {
             <Button variant='outline' onClick={() => setState({ ...DEFAULTS })}>
               Clear
             </Button>
-            <Button onClick={() => setState({ ...draft, page: DEFAULTS.page })}>Apply filters</Button>
+            <Button onClick={() => setState({ ...draft, sort, page: DEFAULTS.page })}>Apply filters</Button>
           </HStack>
         </HStack>
       </Stack>
@@ -150,14 +208,14 @@ const ElectionsPage = () => {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {q.isLoading && <TableRowsSkeleton columns={6} />}
+              {(q.isLoading || sorting.isLoading) && <TableRowsSkeleton columns={6} />}
               {elections.map((e) => (
                 <ElectionListRow key={e.electionId} election={e} title={titles[e.electionId]} />
               ))}
             </Table.Body>
           </Table.Root>
         </Table.ScrollArea>
-        {!q.isLoading && elections.length === 0 && (
+        {!q.isLoading && !sorting.isLoading && elections.length === 0 && (
           <EmptyState title='No elections found' hint='Try clearing the filters above.' />
         )}
       </PageSection>

@@ -50,6 +50,11 @@ export interface OrganizationSummary {
    *  straight into the list row. */
   name?: string
   avatar?: string
+  /** Optional: only on gateways that rank by these (vocdoni-node #1485,
+   *  see `useOrgStatsSortSupport`). */
+  voteCount?: number
+  lastElectionDate?: string
+  balance?: number
 }
 
 export interface OrganizationsList {

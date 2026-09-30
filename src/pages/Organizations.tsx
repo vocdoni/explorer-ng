@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink } from 'react-router'
 import { AddressAvatar } from '~components/account/AddressAvatar'
 import { EmptyState } from '~components/shared/EmptyState'
+import { RelativeTime } from '~components/shared/RelativeTime'
 import { HashDisplay } from '~components/shared/HashDisplay'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { PageHeader } from '~components/shared/PageHeader'
@@ -10,22 +11,27 @@ import { PageSection } from '~components/shared/PageSection'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import type { OrgStats } from '~hooks/useOrgStats'
 import { useOrgStats } from '~hooks/useOrgStats'
-import { useOrgSortSupport } from '~hooks/useGatewayCapabilities'
+import { useOrgSortSupport, useOrgStatsSortSupport } from '~hooks/useGatewayCapabilities'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useOrganizations } from '~hooks/useVoconeApi'
 import type { OrgSort } from '~hooks/useVoconeApi'
 import type { OrganizationSummary } from '~types/api'
 import { totalPagesOf } from '~utils/pagination'
 
-/** Each option is one `sortBy`/`order` pair the gateway ranks the whole index by. */
+/** Each option is one `sortBy`/`order` pair the gateway ranks the whole index
+ *  by. `needsStats` ones only exist on gateways with vocdoni-node #1485. */
 const SORTS = {
-  'elections-desc': { label: 'Most elections', sort: { by: 'electionCount', order: 'desc' } },
-  'elections-asc': { label: 'Fewest elections', sort: { by: 'electionCount', order: 'asc' } },
-  'created-desc': { label: 'Newest first', sort: { by: 'createdAt', order: 'desc' } },
-  'created-asc': { label: 'Oldest first', sort: { by: 'createdAt', order: 'asc' } },
-  'name-asc': { label: 'Name, A to Z', sort: { by: 'name', order: 'asc' } },
-  'name-desc': { label: 'Name, Z to A', sort: { by: 'name', order: 'desc' } },
-} satisfies Record<string, { label: string; sort: OrgSort }>
+  'elections-desc': { label: 'Most elections', sort: { by: 'electionCount', order: 'desc' }, needsStats: false },
+  'elections-asc': { label: 'Fewest elections', sort: { by: 'electionCount', order: 'asc' }, needsStats: false },
+  'active-desc': { label: 'Recently active', sort: { by: 'lastElection', order: 'desc' }, needsStats: true },
+  'active-asc': { label: 'Least recently active', sort: { by: 'lastElection', order: 'asc' }, needsStats: true },
+  'votes-desc': { label: 'Most votes', sort: { by: 'voteCount', order: 'desc' }, needsStats: true },
+  'balance-desc': { label: 'Largest balance', sort: { by: 'balance', order: 'desc' }, needsStats: true },
+  'created-desc': { label: 'Newest first', sort: { by: 'createdAt', order: 'desc' }, needsStats: false },
+  'created-asc': { label: 'Oldest first', sort: { by: 'createdAt', order: 'asc' }, needsStats: false },
+  'name-asc': { label: 'Name, A to Z', sort: { by: 'name', order: 'asc' }, needsStats: false },
+  'name-desc': { label: 'Name, Z to A', sort: { by: 'name', order: 'desc' }, needsStats: false },
+} satisfies Record<string, { label: string; sort: OrgSort; needsStats: boolean }>
 
 type SortKey = keyof typeof SORTS
 const isSortKey = (value: string): value is SortKey => value in SORTS
@@ -46,13 +52,16 @@ const StatCell = ({ value, loaded }: { value?: string; loaded: boolean }) => {
   return <Table.Cell textAlign='end'>{value}</Table.Cell>
 }
 
-const OrgListRow = ({ org, stats, statsLoading, enriched }: {
+const OrgListRow = ({ org, stats, statsLoading, enriched, withStats }: {
   org: OrganizationSummary
   stats?: OrgStats
   statsLoading: boolean
   enriched: boolean
+  /** The gateway carries votes, last election and balance in the row itself. */
+  withStats: boolean
 }) => {
   const loaded = enriched && !statsLoading
+  const balance = org.balance ?? stats?.balance
   return (
     <Table.Row>
       <Table.Cell minW='0'>
@@ -75,7 +84,18 @@ const OrgListRow = ({ org, stats, statsLoading, enriched }: {
       <Table.Cell textAlign='end'>
         {org.electionCount.toLocaleString()} {org.electionCount === 1 ? 'election' : 'elections'}
       </Table.Cell>
-      <StatCell value={stats?.balance !== undefined ? stats.balance.toLocaleString() : undefined} loaded={loaded} />
+      {withStats && (
+        <>
+          <Table.Cell textAlign='end'>{org.voteCount?.toLocaleString() ?? '—'}</Table.Cell>
+          <Table.Cell>
+            <RelativeTime value={org.lastElectionDate} mode='relative' fontSize='sm' />
+          </Table.Cell>
+        </>
+      )}
+      <StatCell
+        value={balance !== undefined ? balance.toLocaleString() : undefined}
+        loaded={org.balance !== undefined || loaded}
+      />
       <StatCell value={stats?.feesCount !== undefined ? stats.feesCount.toLocaleString() : undefined} loaded={loaded} />
       <Table.Cell>
         <Button asChild variant='link' size='sm'>
@@ -94,7 +114,7 @@ const OrganizationsPage = () => {
   const { state, setState, num } = useUrlListState(DEFAULTS)
   const page = num('page')
   const query = state.q
-  const sort: SortKey = isSortKey(state.sort) ? state.sort : 'elections-desc'
+  const requested: SortKey = isSortKey(state.sort) ? state.sort : 'elections-desc'
   const [queryInput, setQueryInput] = useState(query)
 
   // Re-seed the input when the URL moves under us (Back/Forward, Reset).
@@ -120,6 +140,12 @@ const OrganizationsPage = () => {
   // and is *silently ignored* where absent, so it is not sent until its probe
   // has answered. The name filter is relied on unconditionally.
   const orgSort = useOrgSortSupport()
+  const statsSort = useOrgStatsSortSupport()
+  // A shared link may name an ordering this gateway cannot do; it falls back to
+  // the default rather than being sent and silently ignored.
+  const waitingForStats = SORTS[requested].needsStats && statsSort.isLoading
+  const sort: SortKey = SORTS[requested].needsStats && !statsSort.supported ? 'elections-desc' : requested
+  const sortOptions = Object.entries(SORTS).filter(([, o]) => !o.needsStats || statsSort.supported)
 
   // One paged, ordered request: the API filters and ranks the whole index, so
   // no page of it is ever sorted or sliced here.
@@ -129,7 +155,7 @@ const OrganizationsPage = () => {
     idFilter || undefined,
     nameQuery || undefined,
     undefined,
-    !orgSort.isLoading,
+    !orgSort.isLoading && !waitingForStats,
     orgSort.supported ? SORTS[sort].sort : undefined
   )
 
@@ -159,7 +185,9 @@ const OrganizationsPage = () => {
   // balance/fees may still show "—" rather than block on the full fan-out.
   const enrichedIds = rows.filter((o) => o.name !== undefined).map((o) => o.organizationID)
   const enrichedSet = new Set([...enrichedIds, ...pageStats.capped])
-  const listLoading = orgSort.isLoading || list.isLoading
+  const listLoading = orgSort.isLoading || waitingForStats || list.isLoading
+  const withStats = statsSort.supported
+  const columns = withStats ? 7 : 5
 
   return (
     <Grid gap={6}>
@@ -177,7 +205,7 @@ const OrganizationsPage = () => {
         {orgSort.supported && (
           <NativeSelect.Root>
             <NativeSelect.Field value={sort} onChange={(e) => setState({ sort: e.target.value, page: DEFAULTS.page })}>
-              {Object.entries(SORTS).map(([key, { label }]) => (
+              {sortOptions.map(([key, { label }]) => (
                 <option key={key} value={key}>
                   {label}
                 </option>
@@ -226,13 +254,19 @@ const OrganizationsPage = () => {
               <Table.Row>
                 <Table.ColumnHeader>Organization</Table.ColumnHeader>
                 <Table.ColumnHeader textAlign='end'>Elections</Table.ColumnHeader>
+                {withStats && (
+                  <>
+                    <Table.ColumnHeader textAlign='end'>Votes</Table.ColumnHeader>
+                    <Table.ColumnHeader>Last election</Table.ColumnHeader>
+                  </>
+                )}
                 <Table.ColumnHeader textAlign='end'>Balance (tokens)</Table.ColumnHeader>
                 <Table.ColumnHeader textAlign='end'>Fees paid (count)</Table.ColumnHeader>
                 <Table.ColumnHeader />
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {listLoading && <TableRowsSkeleton columns={5} />}
+              {listLoading && <TableRowsSkeleton columns={columns} />}
               {rows.map((o) => (
                 <OrgListRow
                   key={o.organizationID}
@@ -240,6 +274,7 @@ const OrganizationsPage = () => {
                   stats={stats[o.organizationID]}
                   statsLoading={pageStats.isLoading}
                   enriched={enrichedSet.has(o.organizationID)}
+                  withStats={withStats}
                 />
               ))}
             </Table.Body>
