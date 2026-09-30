@@ -13,10 +13,22 @@ import { useOrgStats } from '~hooks/useOrgStats'
 import { useOrgSortSupport } from '~hooks/useGatewayCapabilities'
 import { useUrlListState } from '~hooks/useUrlListState'
 import { useOrganizations } from '~hooks/useVoconeApi'
+import type { OrgSort } from '~hooks/useVoconeApi'
 import type { OrganizationSummary } from '~types/api'
 import { totalPagesOf } from '~utils/pagination'
 
-type SortKey = 'elections-desc' | 'elections-asc'
+/** Each option is one `sortBy`/`order` pair the gateway ranks the whole index by. */
+const SORTS = {
+  'elections-desc': { label: 'Most elections', sort: { by: 'electionCount', order: 'desc' } },
+  'elections-asc': { label: 'Fewest elections', sort: { by: 'electionCount', order: 'asc' } },
+  'created-desc': { label: 'Newest first', sort: { by: 'createdAt', order: 'desc' } },
+  'created-asc': { label: 'Oldest first', sort: { by: 'createdAt', order: 'asc' } },
+  'name-asc': { label: 'Name, A to Z', sort: { by: 'name', order: 'asc' } },
+  'name-desc': { label: 'Name, Z to A', sort: { by: 'name', order: 'desc' } },
+} satisfies Record<string, { label: string; sort: OrgSort }>
+
+type SortKey = keyof typeof SORTS
+const isSortKey = (value: string): value is SortKey => value in SORTS
 
 const DEFAULTS = { page: '0', q: '', sort: 'elections-desc' }
 
@@ -82,7 +94,7 @@ const OrganizationsPage = () => {
   const { state, setState, num } = useUrlListState(DEFAULTS)
   const page = num('page')
   const query = state.q
-  const sort = (state.sort === 'elections-asc' ? 'elections-asc' : 'elections-desc') as SortKey
+  const sort: SortKey = isSortKey(state.sort) ? state.sort : 'elections-desc'
   const [queryInput, setQueryInput] = useState(query)
 
   // Re-seed the input when the URL moves under us (Back/Forward, Reset).
@@ -118,7 +130,7 @@ const OrganizationsPage = () => {
     nameQuery || undefined,
     undefined,
     !orgSort.isLoading,
-    orgSort.supported ? { by: 'electionCount', order: sort === 'elections-asc' ? 'asc' : 'desc' } : undefined
+    orgSort.supported ? SORTS[sort].sort : undefined
   )
 
   const rows = useMemo(() => list.data?.organizations ?? [], [list.data?.organizations])
@@ -165,8 +177,11 @@ const OrganizationsPage = () => {
         {orgSort.supported && (
           <NativeSelect.Root>
             <NativeSelect.Field value={sort} onChange={(e) => setState({ sort: e.target.value, page: DEFAULTS.page })}>
-              <option value='elections-desc'>Most elections</option>
-              <option value='elections-asc'>Fewest elections</option>
+              {Object.entries(SORTS).map(([key, { label }]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
             </NativeSelect.Field>
             <NativeSelect.Indicator />
           </NativeSelect.Root>

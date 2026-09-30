@@ -65,7 +65,7 @@ const IDLE_POLL_MS = 60000
 
 const DashboardPage = () => {
   const chain = useChainInfo()
-  const elections = useElections(0, ROWS, undefined, undefined, undefined, IDLE_POLL_MS)
+  const elections = useElections(0, ROWS, {}, IDLE_POLL_MS)
   const votes = useVotes(0, ROWS)
   const txs = useTransactions(0, ROWS, undefined, undefined, undefined, IDLE_POLL_MS)
   const validators = useValidators(IDLE_POLL_MS)

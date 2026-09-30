@@ -32,7 +32,7 @@ const AccountDetailPage = () => {
   const { address = '' } = useParams()
   const { state, setState } = useUrlListState(DEFAULTS)
   const org = useOrganizationMeta(address)
-  const elections = useElections(0, 12, undefined, address)
+  const elections = useElections(0, 12, { organizationId: address })
   const rows = elections.data?.elections ?? []
   const { titles } = useElectionTitles(rows.map((e) => e.electionId))
 

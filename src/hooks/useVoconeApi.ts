@@ -58,26 +58,46 @@ export const useChainStats = () => {
   })
 }
 
+/** Filters `GET /elections` understands. Dates are `YYYY-MM-DD` or RFC3339,
+ *  and bounds are inclusive. `status` values are lowercase (`ready`, `results`…). */
+export interface ElectionFilters {
+  status?: string
+  organizationId?: string
+  electionId?: string
+  /** Closed early by the organizer (`true`) or not (`false`). */
+  manuallyEnded?: boolean
+  startDateAfter?: string
+  startDateBefore?: string
+  endDateAfter?: string
+  endDateBefore?: string
+}
+
+const ELECTION_FILTER_KEYS = [
+  'status',
+  'organizationId',
+  'electionId',
+  'manuallyEnded',
+  'startDateAfter',
+  'startDateBefore',
+  'endDateAfter',
+  'endDateBefore',
+] as const satisfies ReadonlyArray<keyof ElectionFilters>
+
 /** `pollMs` lets a caller override the shared 15s refresh with a slower
  *  interval (e.g. the Dashboard's "recent elections" panel, which does not
  *  need list-page freshness) without changing the default for every other
  *  caller of this hook. */
-export const useElections = (
-  page: number,
-  limit: number,
-  status?: string,
-  organizationId?: string,
-  electionId?: string,
-  pollMs?: number
-) => {
+export const useElections = (page: number, limit: number, filters: ElectionFilters = {}, pollMs?: number) => {
   const { apiUrl, refreshMs } = useApi()
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
-  if (status) params.set('status', status)
-  if (organizationId) params.set('organizationId', organizationId)
-  if (electionId) params.set('electionId', electionId)
+  ELECTION_FILTER_KEYS.forEach((key) => {
+    const value = filters[key]
+    if (value !== undefined && value !== '') params.set(key, String(value))
+  })
+  const query = params.toString()
   return useQuery({
-    queryKey: ['elections', apiUrl, page, limit, status, organizationId, electionId],
-    queryFn: () => fetchJson<ElectionsList>(q(apiUrl, `/elections?${params.toString()}`)),
+    queryKey: ['elections', apiUrl, query],
+    queryFn: () => fetchJson<ElectionsList>(q(apiUrl, `/elections?${query}`)),
     refetchInterval: pollMs ?? refreshMs,
   })
 }
