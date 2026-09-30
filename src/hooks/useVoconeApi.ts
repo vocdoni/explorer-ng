@@ -519,8 +519,8 @@ export interface VoteActivityResponse {
 
 /**
  * `GET /elections/{id}/votes/activity?bucket=hour|day` — server-side vote
- * timeline aggregation. Replaces the expensive client-side walk of every
- * `/votes` page for gateways that expose the route.
+ * timeline aggregation. On gateways that expose the route it spares the
+ * expensive client-side walk of every `/votes` page.
  *
  * Any failure (404 on an unknown election, or a 404/other error on an older
  * gateway that predates the route) is treated identically: the caller falls

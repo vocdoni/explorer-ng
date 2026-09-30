@@ -9,8 +9,8 @@ import type { Election, ElectionMetadata, LocalizedText } from '~types/api'
  * `value` into ballot field `field`. A field is *not* a question and a value is *not*
  * a choice: for a multichoice ballot the fields are pick-slots, for a budget ballot
  * they are the options themselves. Reading it as "row = question, column = choice"
- * (which this explorer did until now) produces a confidently wrong tally for every
- * election that is not plain single-choice.
+ * produces a confidently wrong tally for every election that is not plain
+ * single-choice.
  *
  * The per-branch arithmetic lives in `@vocdoni/ballot`, which is the same package the
  * Vocdoni voting stack encodes ballots with. What lives here is everything the package

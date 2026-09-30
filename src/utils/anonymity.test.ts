@@ -20,8 +20,8 @@ describe('resolveAnonymity', () => {
   })
 
   it('reads blind-CSP anonymity off the census origin, not the vote mode', () => {
-    // The regression: `voteMode.anonymous` is false here, yet the ballots are
-    // anonymous — and the card used to print the exact opposite.
+    // `voteMode.anonymous` is false here, yet the ballots are anonymous: reading
+    // the vote mode alone would print the exact opposite.
     const r = resolveAnonymity(election('OFF_CHAIN_CA_V2', false))
     expect(r.mechanisms).toEqual(['blind-csp'])
     expect(r.badge).toBe('Anonymous · blind signature')

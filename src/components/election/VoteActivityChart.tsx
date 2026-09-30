@@ -60,8 +60,7 @@ export const VoteActivityChart = ({ electionId, chainId, analytics }: Props) => 
 
   // The server endpoint may 404 on an older gateway that predates the route,
   // or on any other request error — either way this falls back to the
-  // client-side sampled timeline below, with no visual difference from before
-  // this endpoint existed.
+  // client-side sampled timeline below, which renders identically.
   const activity = useVoteActivity(electionId, bucketParam, { live: analytics.isLive })
   const serverAvailable = activity.isSuccess && !!activity.data
 

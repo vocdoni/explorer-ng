@@ -73,8 +73,8 @@ export const BallotContents = ({ content }: { content: VoteContent }) => {
       )
     }
 
-    // Every layout the explorer can resolve renders as cards now, including budget and
-    // quadratic ballots, which used to fall through to a bare list of numbers.
+    // Every layout the explorer can resolve renders as cards, including budget and
+    // quadratic ballots. Anything else (a `raw` layout, or no questions) shows raw numbers.
     const showCards = content.shape !== 'raw' && content.questions.length > 0
 
     if (showCards) {

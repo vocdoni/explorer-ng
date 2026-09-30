@@ -12,9 +12,8 @@ interface Props {
 }
 
 /**
- * Progressive disclosure for protocol-level data. Every page that used to end in
- * a bare JSON dump now tucks it in here, collapsed, so the plain-English summary
- * above it stays the page.
+ * Progressive disclosure for protocol-level data. Pages put their raw JSON in
+ * here, collapsed, so the plain-English summary above it stays the page.
  */
 export const TechnicalDetails = ({ title = 'Technical details', json, children }: Props) => (
   <Collapsible.Root>

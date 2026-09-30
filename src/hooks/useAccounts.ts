@@ -52,9 +52,8 @@ export interface PriceFactors {
 }
 
 // `GET /accounts/{address}` itself lives in `~hooks/useVoconeApi` as
-// `useOrganization`. It used to have a twin here, back when the account view and
-// the organization view were separate pages; one endpoint behind two query keys
-// meant the same response cached twice.
+// `useOrganization`. Don't add a second hook for it here: one endpoint behind two
+// query keys caches the same response twice.
 
 /** `GET /accounts/{address}/transfers/page/{page}` — paginated token transfers
  *  in and out of this account. */

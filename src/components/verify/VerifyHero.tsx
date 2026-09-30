@@ -6,8 +6,8 @@ import { normalizeId } from '~utils/format'
 
 /**
  * The front door for the one visitor who is not here to browse a blockchain: a
- * voter who wants to know their ballot arrived. Previously `/verify` was
- * reachable only from the nav, so arriving cold meant guessing.
+ * voter who wants to know their ballot arrived. It sits on the landing page so
+ * that a voter arriving cold does not have to find `/verify` in the nav.
  *
  * The election ID is not asked for — `GET /votes/{id}` resolves it — because a
  * second field is exactly where a nervous voter gives up.

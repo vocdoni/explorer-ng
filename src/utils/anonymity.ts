@@ -5,8 +5,7 @@ import type { Election } from '~types/api'
  * cast it.
  *
  * They are not variants of one setting, which is why reading only the first one
- * — as this explorer did — silently mislabels every election that uses the
- * second:
+ * silently mislabels every election that uses the second:
  *
  * - `zk` is a **vote mode**: `voteMode.anonymous`, a zero-knowledge proof of
  *   census membership carried inside the vote transaction.

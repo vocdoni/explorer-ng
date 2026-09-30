@@ -172,8 +172,8 @@ export const AppLayout = () => {
         <Outlet />
       </Box>
 
-      {/* No navigation down here: everything the footer used to link to lives in
-          the header, one scroll-free click away. What is left is provenance. */}
+      {/* No navigation down here: every destination lives in the header, one
+          scroll-free click away. The footer carries provenance only. */}
       <Box as='footer' w='full' bg='bg.muted' borderTop='1px solid' borderColor='border'>
         <Box maxW='navbar' mx='auto' px={{ base: 4, md: 6, xl: 10 }}>
           <Flex
