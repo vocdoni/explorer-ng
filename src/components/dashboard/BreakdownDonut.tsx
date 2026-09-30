@@ -22,16 +22,18 @@ const percent = (value: number, total: number) => (total > 0 ? Math.round((value
  * The centre carries the total so the chart answers "how many, and of what mix"
  * in one look, and the legend repeats every exact count — the ring communicates
  * proportion, the numbers carry the precision. No axes, gridlines or tooltips:
- * with at most six slices there is nothing a hover would reveal that the legend
- * does not already state.
+ * with a handful of slices there is nothing a hover would reveal that the
+ * legend does not already state.
  */
 export const BreakdownDonut = ({ title, subtitle, breakdown, unit, right }: Props) => {
-  const { slices, total, isLoading } = breakdown
+  const { slices, total, isLoading, isError } = breakdown
 
   return (
     <PageSection title={title} subtitle={subtitle} right={right} h='100%'>
       {isLoading && slices.length === 0 ? (
         <Skeleton h='180px' borderRadius='md' />
+      ) : isError && slices.length === 0 ? (
+        <EmptyState title='Could not load these counts' hint='The gateway did not answer. Retrying on the next refresh.' py={6} />
       ) : slices.length === 0 ? (
         <EmptyState title='Nothing to break down yet' py={6} />
       ) : (

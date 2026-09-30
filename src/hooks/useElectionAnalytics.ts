@@ -453,9 +453,9 @@ export const useElectionFees = (electionId: string, page = 0) => {
  * this normally probes the handful of blocks right after the
  * `set_process_status` fee (the close moment) for `reveal_process_keys`
  * transactions. Gateways new enough to index the link directly report it on
- * the election record itself (`keyRevealHeight`/`keyRevealTxHash`, see
- * `useGatewayCapabilities`); when `known` is supplied, that answer is
- * returned synchronously and the scan never runs. The scan is bounded to a
+ * the election record itself (`keyRevealHeight`/`keyRevealTxHash`); when
+ * `known` is supplied, that answer is returned synchronously and the scan
+ * never runs. The scan is bounded to a
  * few requests, only runs for encrypted elections, and resolves to `null`
  * rather than erroring when the window turns up nothing.
  */

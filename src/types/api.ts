@@ -31,11 +31,23 @@ export interface ChainInfo {
   networkCapacity: number
 }
 
+/** `GET /chain/stats`: chain-wide aggregates the indexer keeps. Both maps are
+ *  keyed by the raw enum and omit zero buckets, and between them they cover
+ *  every transaction and every election — `txCountByType` sums to
+ *  `ChainInfo.transactionCount`, `electionCountByStatus` to `electionCount`. */
+export interface ChainStats {
+  txCountByType: Record<string, number>
+  electionCountByStatus: Record<string, number>
+  accountCount: number
+  electionCount: number
+  voteCount: number
+}
+
 export interface OrganizationSummary {
   organizationID: string
   electionCount: number
   /** Optional: only present on gateways new enough to inline org metadata
-   *  straight into the list row (see `useGatewayCapabilities`). */
+   *  straight into the list row. */
   name?: string
   avatar?: string
 }
@@ -69,7 +81,7 @@ export interface ElectionSummary {
   manuallyEnded: boolean
   chainId: string
   /** Optional: only present on gateways new enough to inline the metadata
-   *  title straight into the list row (see `useGatewayCapabilities`). */
+   *  title straight into the list row. */
   title?: string
 }
 
@@ -139,9 +151,9 @@ export interface Election {
     maxCensusSize?: number
   }
   /** Optional: block height/tx hash of the `reveal_process_keys` transaction,
-   *  populated only on gateways that index election->key-reveal linkage (see
-   *  `useGatewayCapabilities`). Absent elsewhere, including on unencrypted
-   *  elections that never reveal keys. */
+   *  populated only on gateways that index election->key-reveal linkage.
+   *  Absent elsewhere, including on unencrypted elections that never reveal
+   *  keys. */
   keyRevealHeight?: number
   keyRevealTxHash?: string
 }
@@ -164,9 +176,8 @@ export interface Vote {
   weight?: string
   encryptionKeys?: number[]
   /** Optional: RFC3339 timestamp of the block this vote was sealed into, only
-   *  on gateways new enough to inline it into list rows (see
-   *  `useGatewayCapabilities`). List rows otherwise carry no timestamp at
-   *  all — `date` is a detail-endpoint-only field. */
+   *  on gateways new enough to inline it into list rows. List rows otherwise
+   *  carry no timestamp at all — `date` is a detail-endpoint-only field. */
   blockTime?: string
 }
 
