@@ -6,6 +6,11 @@ import { tabsAnatomy } from '@chakra-ui/react/anatomy'
 const settings = {
   root: {
     '--tabs-height': 'auto',
+    // Pages are `Grid`s with an implicit `auto` column, and a grid item's default
+    // `min-width: auto` lets the nowrap trigger row size that column — widening the
+    // whole page past the viewport on phones. Letting the root shrink is what makes
+    // the list's `maxWidth: full` + `overflowX: auto` actually scroll instead.
+    minW: 0,
   },
   list: {
     p: 1,
