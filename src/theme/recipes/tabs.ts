@@ -6,10 +6,8 @@ import { tabsAnatomy } from '@chakra-ui/react/anatomy'
 const settings = {
   root: {
     '--tabs-height': 'auto',
-    // Pages are `Grid`s with an implicit `auto` column, and a grid item's default
-    // `min-width: auto` lets the nowrap trigger row size that column — widening the
-    // whole page past the viewport on phones. Letting the root shrink is what makes
-    // the list's `maxWidth: full` + `overflowX: auto` actually scroll instead.
+    // A flex or grid item's default `min-width: auto` would let the trigger row set
+    // the parent's width, widening the page past the viewport on phones.
     minW: 0,
   },
   list: {
@@ -18,7 +16,10 @@ const settings = {
     borderRadius: 'sm',
     w: 'fit-content',
     maxWidth: 'full',
-    overflowX: 'auto',
+    // Wrap rather than scroll on narrow screens: a scrolled strip hides the selected
+    // tab when it arrives via `?tab=`, and shows a scrollbar inside the pill where
+    // scrollbars are always visible.
+    flexWrap: 'wrap',
   },
   trigger: {
     py: 1.5,
