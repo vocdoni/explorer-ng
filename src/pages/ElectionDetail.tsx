@@ -84,7 +84,7 @@ const ElectionDetailPage = () => {
   const orgLabel = organization.meta.name || shortHex(election.data?.organizationId, 10, 6)
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title={meta.title || shortHex(electionId, 12, 8)}
         status={election.data?.status}

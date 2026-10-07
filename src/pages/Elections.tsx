@@ -116,7 +116,7 @@ const ElectionsPage = () => {
   const { titles } = useResolvedElectionTitles(elections)
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader title='Elections' subtitle='Every election run on this chain — open one to see votes and results.' />
 
       <Stack gap={3}>

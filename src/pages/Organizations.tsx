@@ -190,7 +190,7 @@ const OrganizationsPage = () => {
   const columns = withStats ? 7 : 5
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader title='Organizations' subtitle='The accounts that create and run elections on this chain.' />
 
       <Grid templateColumns={{ base: '1fr', md: orgSort.supported ? '2fr 1fr auto' : '3fr auto' }} gap={2}>

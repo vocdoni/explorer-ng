@@ -18,7 +18,7 @@ const TransactionDetailPage = () => {
   const typeLabel = transactionTypeLabel(info?.type)
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title={`${typeLabel} transaction`}
         subtitle={<HashDisplay value={hash} copyLabel='Transaction hash' full />}

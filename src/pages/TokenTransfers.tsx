@@ -51,7 +51,7 @@ const TokenTransfersPage = () => {
   const largestBalance = topHolders.data?.accounts?.[0]?.balance ?? 0
 
   return (
-    <Grid gap={4}>
+    <Grid gap={4} templateColumns='minmax(0, 1fr)'>
       <PageHeader title='Tokens' subtitle='VOC token transfers and the accounts holding them.' />
 
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>

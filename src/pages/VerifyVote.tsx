@@ -52,7 +52,7 @@ const VerifyVotePage = () => {
   const avgBlockSecs = ((chain.data?.blockTime ?? []).find((ms) => ms > 0) ?? 0) / 1000
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title='Verify a vote'
         subtitle='Check that your ballot reached the blockchain, see the evidence behind it, and download a proof you can keep.'

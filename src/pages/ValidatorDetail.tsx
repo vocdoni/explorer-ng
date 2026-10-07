@@ -18,7 +18,7 @@ const ValidatorDetailPage = () => {
   const rows = proposed.data?.blocks ?? []
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       {/* subtitle renders inside a <p>; HashDisplay is block-level, so it sits below the header instead */}
       <PageHeader title={validator?.name || 'Validator'} />
       <HashDisplay value={validator?.address ?? address} copyLabel='Validator address' full />

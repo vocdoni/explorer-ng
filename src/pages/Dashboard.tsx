@@ -116,7 +116,7 @@ const DashboardPage = () => {
   const transferRows = (transfers.data?.transfers ?? []).slice(0, ROWS)
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title='Vocdoni chain'
         subtitle={

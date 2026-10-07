@@ -53,7 +53,7 @@ const AccountDetailPage = () => {
       : 'Token balance, transfers and fees for a single Vocdoni blockchain account.')
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title={org.meta.name || shortHex(address, 12, 8)}
         subtitle={subtitle}

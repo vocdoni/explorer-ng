@@ -44,7 +44,7 @@ const BlocksPage = () => {
   const rows = (blocks.data?.blocks ?? []).filter((b) => (onlyWithTxs === 'withTx' ? b.txCount > 0 : true))
 
   return (
-    <Grid gap={4}>
+    <Grid gap={4} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title='Blocks'
         subtitle='Each block bundles the transactions confirmed at that point in the chain.'
