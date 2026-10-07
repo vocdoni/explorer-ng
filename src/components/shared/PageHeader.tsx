@@ -22,7 +22,9 @@ export const PageHeader = ({ title, subtitle, status, badges, breadcrumb, action
     {breadcrumb && <Box mb={2}>{breadcrumb}</Box>}
     <Flex justify='space-between' align='flex-start' gap={4} wrap='wrap'>
       <Box minW={0} flex='1'>
-        <Heading size='2xl' display='flex' gap={3} alignItems='center' flexWrap='wrap'>
+        {/* `anywhere`, not the inherited `break-word`: the title is an anonymous flex item, and only
+            `anywhere` lowers its min-content width, so a long single-word title can't widen the page. */}
+        <Heading size='2xl' display='flex' gap={3} alignItems='center' flexWrap='wrap' overflowWrap='anywhere'>
           {title}
           {status && <StatusTag status={status} />}
           {badges}
