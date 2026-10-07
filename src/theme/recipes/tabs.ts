@@ -6,6 +6,9 @@ import { tabsAnatomy } from '@chakra-ui/react/anatomy'
 const settings = {
   root: {
     '--tabs-height': 'auto',
+    // A flex or grid item's default `min-width: auto` would let the trigger row set
+    // the parent's width, widening the page past the viewport on phones.
+    minW: 0,
   },
   list: {
     p: 1,
@@ -13,7 +16,10 @@ const settings = {
     borderRadius: 'sm',
     w: 'fit-content',
     maxWidth: 'full',
-    overflowX: 'auto',
+    // Wrap rather than scroll on narrow screens: a scrolled strip hides the selected
+    // tab when it arrives via `?tab=`, and shows a scrollbar inside the pill where
+    // scrollbars are always visible.
+    flexWrap: 'wrap',
   },
   trigger: {
     py: 1.5,

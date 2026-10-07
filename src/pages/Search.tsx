@@ -9,7 +9,7 @@ const SearchPage = () => {
   const { search, status, reset } = useUnifiedSearch()
 
   return (
-    <Grid gap={4}>
+    <Grid gap={4} templateColumns='minmax(0, 1fr)'>
       <PageHeader title='Search' subtitle='Paste an election ID, vote code, transaction hash or block height.' />
       <PageSection title='Quick search' subtitle='We will find whatever the identifier belongs to.'>
         <Stack direction={{ base: 'column', md: 'row' }} gap={3}>

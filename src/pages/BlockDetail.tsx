@@ -25,7 +25,7 @@ const BlockDetailPage = () => {
   const rows = txs.data?.transactions ?? []
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title={`Block #${height}`}
         subtitle={<RelativeTime value={block.data?.header.time} />}

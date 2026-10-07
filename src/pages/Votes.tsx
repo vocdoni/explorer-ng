@@ -21,7 +21,7 @@ const VotesPage = () => {
   const rows = votes.data?.votes ?? []
 
   return (
-    <Grid gap={4}>
+    <Grid gap={4} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title='Votes'
         subtitle='Every ballot recorded on the chain. A vote ID is a one-time code proving a vote was cast, without revealing who cast it.'

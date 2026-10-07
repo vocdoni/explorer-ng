@@ -43,7 +43,7 @@ const MonitoringPage = () => {
   const avgBlockSecs = avgBlockMs / 1000
 
   return (
-    <Grid gap={6}>
+    <Grid gap={6} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title='Network status'
         subtitle='A full technical view of node sync, block production and the validator set.'

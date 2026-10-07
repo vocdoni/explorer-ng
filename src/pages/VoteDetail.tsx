@@ -104,7 +104,7 @@ const VoteDetailPage = () => {
   }
 
   return (
-    <Grid gap={8}>
+    <Grid gap={8} templateColumns='minmax(0, 1fr)'>
       <VoteReceiptHero
         voteId={voteId}
         electionId={electionId}

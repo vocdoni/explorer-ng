@@ -36,7 +36,7 @@ const TransactionsPage = () => {
   const rows = txs.data?.transactions ?? []
 
   return (
-    <Grid gap={4}>
+    <Grid gap={4} templateColumns='minmax(0, 1fr)'>
       <PageHeader
         title='Transactions'
         subtitle='Every action recorded on the chain, newest first.'
