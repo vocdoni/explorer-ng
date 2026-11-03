@@ -67,19 +67,6 @@ const fetchPage = async <T>(url: string): Promise<T | null> => {
   }
 }
 
-/** `GET /chain/transfers?accountId={address}&page={page}` — paginated token
- *  transfers in and out of this account. */
-export const useAccountTransfers = (address: string, page: number) => {
-  const { apiUrl, refreshMs } = useApi()
-  const params = new URLSearchParams({ accountId: address, page: String(page) })
-  return useQuery({
-    queryKey: ['account-transfers', apiUrl, address, page],
-    queryFn: () => fetchPage<TransfersList>(q(apiUrl, `/chain/transfers?${params.toString()}`)),
-    enabled: !!address,
-    refetchInterval: refreshMs,
-  })
-}
-
 /** `GET /chain/fees?accountId={address}&page={page}` — paginated fees spent by
  *  this account. */
 export const useAccountFees = (address: string, page: number) => {
@@ -101,7 +88,7 @@ export const useChainTransfers = (page: number, accountId?: string) => {
   if (accountId) params.set('accountId', accountId)
   return useQuery({
     queryKey: ['chain-transfers', apiUrl, page, accountId],
-    queryFn: () => fetchJson<TransfersList>(q(apiUrl, `/chain/transfers?${params.toString()}`)),
+    queryFn: () => fetchPage<TransfersList>(q(apiUrl, `/chain/transfers?${params.toString()}`)),
     refetchInterval: refreshMs,
   })
 }
