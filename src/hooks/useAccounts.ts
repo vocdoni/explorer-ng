@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useApi } from '~contexts/ApiContext'
 import type { OrganizationAccount, Pagination } from '~types/api'
 import { fetchJson } from '~utils/http'
+import { isPageNotFound } from '~utils/pagination'
 
 const q = (base: string, path: string) => `${base}${path}`
 
@@ -55,24 +56,25 @@ export interface PriceFactors {
 // `useOrganization`. Don't add a second hook for it here: one endpoint behind two
 // query keys caches the same response twice.
 
-/** `GET /accounts/{address}/transfers/page/{page}` — paginated token transfers
- *  in and out of this account. */
-export const useAccountTransfers = (address: string, page: number) => {
-  const { apiUrl, refreshMs } = useApi()
-  return useQuery({
-    queryKey: ['account-transfers', apiUrl, address, page],
-    queryFn: () => fetchJson<TransfersList>(q(apiUrl, `/accounts/${address}/transfers/page/${page}`)),
-    enabled: !!address,
-    refetchInterval: refreshMs,
-  })
+/** Fetches one page of a list, resolving to `null` when `page` is past the
+ *  last one so a stale page index renders as an empty table, not an error. */
+const fetchPage = async <T>(url: string): Promise<T | null> => {
+  try {
+    return await fetchJson<T>(url)
+  } catch (err) {
+    if (isPageNotFound(err)) return null
+    throw err
+  }
 }
 
-/** `GET /accounts/{address}/fees/page/{page}` — paginated fees spent by this account. */
+/** `GET /chain/fees?accountId={address}&page={page}` — paginated fees spent by
+ *  this account. */
 export const useAccountFees = (address: string, page: number) => {
   const { apiUrl, refreshMs } = useApi()
+  const params = new URLSearchParams({ accountId: address, page: String(page) })
   return useQuery({
     queryKey: ['account-fees', apiUrl, address, page],
-    queryFn: () => fetchJson<FeesList>(q(apiUrl, `/accounts/${address}/fees/page/${page}`)),
+    queryFn: () => fetchPage<FeesList>(q(apiUrl, `/chain/fees?${params.toString()}`)),
     enabled: !!address,
     refetchInterval: refreshMs,
   })
@@ -86,7 +88,7 @@ export const useChainTransfers = (page: number, accountId?: string) => {
   if (accountId) params.set('accountId', accountId)
   return useQuery({
     queryKey: ['chain-transfers', apiUrl, page, accountId],
-    queryFn: () => fetchJson<TransfersList>(q(apiUrl, `/chain/transfers?${params.toString()}`)),
+    queryFn: () => fetchPage<TransfersList>(q(apiUrl, `/chain/transfers?${params.toString()}`)),
     refetchInterval: refreshMs,
   })
 }

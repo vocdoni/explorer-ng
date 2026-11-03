@@ -17,7 +17,7 @@ interface Props {
 
 /**
  * Every fee charged against this election — `GET
- * /chain/fees/reference/{electionId}/page/{p}`.
+ * /chain/fees?reference={electionId}&page={page}`.
  *
  * The `reference` field is an election id for election transactions but an
  * IPFS URI for account-metadata ones, so rows whose reference is not this

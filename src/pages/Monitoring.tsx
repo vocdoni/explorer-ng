@@ -8,7 +8,7 @@ import { StatTile } from '~components/shared/StatTile'
 import { TechnicalDetails, TechnicalField } from '~components/shared/TechnicalDetails'
 import { Tooltip } from '~components/ui/Tooltip'
 import { useElectionPriceFactors, useTxCosts } from '~hooks/useAccounts'
-import { useChainInfo, useTransactionCount, useValidators } from '~hooks/useVoconeApi'
+import { useChainInfo, useValidators } from '~hooks/useVoconeApi'
 
 const PRICE_FACTOR_HINTS: Record<string, string> = {
   k1: 'Weight of census size on election price.',
@@ -30,7 +30,6 @@ const VALIDATOR_HINTS: Record<string, string> = {
 const MonitoringPage = () => {
   const chain = useChainInfo()
   const validators = useValidators()
-  const txCount = useTransactionCount()
   const txCosts = useTxCosts()
   const priceFactors = useElectionPriceFactors()
   const syncing = chain.data?.syncing ?? false
@@ -92,7 +91,7 @@ const MonitoringPage = () => {
         />
         <StatTile
           label='Indexed transactions'
-          value={(txCount.data?.count ?? 0).toLocaleString()}
+          value={(chain.data?.transactionCount ?? 0).toLocaleString()}
           help='Total transactions recorded by this node so far.'
         />
       </SimpleGrid>

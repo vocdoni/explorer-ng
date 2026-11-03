@@ -6,7 +6,6 @@ import type {
   BlockList,
   ChainInfo,
   ChainStats,
-  CountResult,
   Election,
   ElectionMetadata,
   ElectionSummary,
@@ -457,15 +456,33 @@ export const useTransaction = (hash: string) => {
   })
 }
 
-/** `GET /chain/transactions/{height}/{index}` — the transaction sitting at a
- *  position in a block. A missing index answers 204 with an empty body, which
- *  `fetchJson` maps to `{}` — an object without `txInfo`, not an error. The
- *  block is sealed, so the answer can never change and is never polled. */
+/** Rows per page when scanning one block's transactions for a position. */
+const BLOCK_TXS_PAGE_SIZE = 100
+/** Page cap for that scan: 2000 transactions, well above any real block. */
+const BLOCK_TXS_MAX_PAGES = 20
+
+/** The transaction sitting at a position in a block. `GET
+ *  /chain/transactions?height={height}` lists the block's transactions (each
+ *  row carries its `index`), paged until the position turns up, and `GET
+ *  /chain/transactions/{hash}` then returns the full transaction. A position
+ *  the block does not have resolves to `{}` — an object without `txInfo`, not
+ *  an error. The block is sealed, so the answer can never change and is never
+ *  polled. */
 export const useTransactionByIndex = (height: string, index: string) => {
   const { apiUrl } = useApi()
   return useQuery({
     queryKey: ['transaction-by-index', apiUrl, height, index],
-    queryFn: () => fetchJson<Partial<GenericTransactionWithInfo>>(q(apiUrl, `/chain/transactions/${height}/${index}`)),
+    queryFn: async (): Promise<Partial<GenericTransactionWithInfo>> => {
+      const position = Number(index)
+      for (let page = 0; page < BLOCK_TXS_MAX_PAGES; page++) {
+        const params = new URLSearchParams({ height, limit: String(BLOCK_TXS_PAGE_SIZE), page: String(page) })
+        const list = await fetchJson<TransactionsList>(q(apiUrl, `/chain/transactions?${params.toString()}`))
+        const found = (list.transactions ?? []).find((tx) => tx.index === position)
+        if (found) return fetchJson<GenericTransactionWithInfo>(q(apiUrl, `/chain/transactions/${found.hash}`))
+        if (list.pagination?.nextPage == null) break
+      }
+      return {}
+    },
     enabled: !!height && !!index,
     staleTime: Infinity,
   })
@@ -488,11 +505,6 @@ export const useValidators = (pollMs?: number) => {
     queryFn: () => fetchJson<ValidatorList>(q(apiUrl, '/chain/validators')),
     refetchInterval: pollMs ?? refreshMs,
   })
-}
-
-export const useTransactionCount = () => {
-  const { apiUrl, refreshMs } = useApi()
-  return useQuery({ queryKey: ['tx-count', apiUrl], queryFn: () => fetchJson<CountResult>(q(apiUrl, '/chain/transactions/count')), refetchInterval: refreshMs })
 }
 
 /** Pick the readable string out of a value that may be a bare string or a
