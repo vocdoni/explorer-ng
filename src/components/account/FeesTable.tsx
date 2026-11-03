@@ -14,7 +14,7 @@ interface Props {
 }
 
 /** Paginated fees-spent table for an account, shared between Account and
- *  Organization detail pages: `GET /accounts/{address}/fees/page/{page}`. */
+ *  Organization detail pages: `GET /chain/fees?accountId={address}&page={page}`. */
 export const FeesTable = ({ address }: Props) => {
   const [page, setPage] = useState(0)
   const fees = useAccountFees(address, page)
