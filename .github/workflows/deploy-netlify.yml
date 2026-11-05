@@ -7,7 +7,12 @@ name: Deploy to Netlify
 #   push to `lts`   -> `production`    -> the stable explorer (LTS gateway)
 #   push to `stage` -> `stage`         -> staging site (a production deploy of *that* site)
 #   push to `main`  -> `develop`       -> dev site (a production deploy of *that* site)
-#   pull request    -> `pull request`  -> preview deploy on the preview site
+#   PR into `lts`   -> `production`    -> preview deploy on the stable site
+#   PR into `stage` -> `stage`         -> preview deploy on the staging site
+#   any other PR    -> `pull request`  -> preview deploy on the preview site
+#
+# A PR is previewed on the site it is about to land on, built against that site's gateway, so a
+# promotion PR (main -> stage, stage -> lts) shows what the target will serve after the merge.
 #
 # Each environment must define:
 #   variable  NETLIFY_SITE_ID
@@ -60,7 +65,10 @@ jobs:
     # required configuration). Environment variables are only injected into a job that names
     # its environment, so without this every `vars.*` below resolves to empty.
     environment:
-      name: ${{ github.event_name == 'pull_request' && 'pull request' || (github.ref_name == 'lts' && 'production' || (github.ref_name == 'stage' && 'stage' || 'develop')) }}
+      name: >-
+        ${{ github.event_name == 'pull_request'
+        && (github.base_ref == 'lts' && 'production' || (github.base_ref == 'stage' && 'stage' || 'pull request'))
+        || (github.ref_name == 'lts' && 'production' || (github.ref_name == 'stage' && 'stage' || 'develop')) }}
       url: ${{ steps.deploy.outputs.deploy-url }}
 
     steps:
@@ -95,9 +103,8 @@ jobs:
         run: pnpm build
         env:
           # Vite's `envPrefix` (see vite.config.ts) exposes these to the bundle.
-          # They come from the environment selected above, so each site is built
-          # against its own gateway and a preview keeps pointing at the dev
-          # gateway even after the same commit is rebuilt for a branch.
+          # They come from the environment selected above, so each site, and each
+          # PR preview on it, is built against that site's own gateway.
           VOCONE_API_URL: ${{ vars.VOCONE_API_URL }}
           VOCONE_REFRESH_MS: ${{ vars.VOCONE_REFRESH_MS }}
 
