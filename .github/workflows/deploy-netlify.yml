@@ -4,14 +4,17 @@ name: Deploy to Netlify
 # every build-time value come from the GitHub environment selected below, so this file never
 # hardcodes a site:
 #
-#   push to `lts`  -> `production`    -> the stable explorer (LTS gateway)
-#   push to `main` -> `develop`       -> dev site (a production deploy of *that* site)
-#   pull request   -> `pull request`  -> preview deploy on the preview site
+#   push to `lts`   -> `production`    -> the stable explorer (LTS gateway)
+#   push to `stage` -> `stage`         -> staging site (a production deploy of *that* site)
+#   push to `main`  -> `develop`       -> dev site (a production deploy of *that* site)
+#   pull request    -> `pull request`  -> preview deploy on the preview site
 #
 # Each environment must define:
-#   variables NETLIFY_SITE_ID, NETLIFY_SITE_NAME
+#   variable  NETLIFY_SITE_ID
 #   variables VOCONE_API_URL, VOCONE_REFRESH_MS (optional; the app falls back to the public
 #             LTS gateway and a 15s poll when unset)
+# Unset ones fall back to the repository-level variables, which point at the dev site, so a new
+# environment has to override NETLIFY_SITE_ID or it deploys over dev.
 # NETLIFY_AUTH_TOKEN is a repository-wide secret. The site id is deliberately a variable, not a
 # secret: a Netlify site's API id is not sensitive, and variables are visible in run logs, which
 # makes a deploy-to-the-wrong-site mistake diagnosable.
@@ -20,10 +23,12 @@ on:
   push:
     branches:
       - lts
+      - stage
       - main
   pull_request:
     branches:
       - lts
+      - stage
       - main
 
 concurrency:
@@ -55,7 +60,7 @@ jobs:
     # required configuration). Environment variables are only injected into a job that names
     # its environment, so without this every `vars.*` below resolves to empty.
     environment:
-      name: ${{ github.event_name == 'pull_request' && 'pull request' || (github.ref_name == 'lts' && 'production' || 'develop') }}
+      name: ${{ github.event_name == 'pull_request' && 'pull request' || (github.ref_name == 'lts' && 'production' || (github.ref_name == 'stage' && 'stage' || 'develop')) }}
       url: ${{ steps.deploy.outputs.deploy-url }}
 
     steps:
@@ -111,9 +116,10 @@ jobs:
           deploy-message: 'Deploy from GitHub Actions'
           enable-pull-request-comment: true
           overwrites-pull-request-comment: true
-          # Names the action's GitHub deployment record after the Netlify site it went to, so
-          # deploys to the two sites stay distinguishable in the repository's deployments view.
-          github-deployment-environment: ${{ vars.NETLIFY_SITE_NAME }}
+          # The job's `environment:` already records each deploy, with its URL, under the
+          # environment it built for. A second record from the action would land in an
+          # environment named after the site, which GitHub creates on the fly.
+          enable-github-deployment: false
           # Creating a commit comment needs `contents: write`, which this job
           # does not have. On a PR it would only duplicate the comment above,
           # and on a branch the GitHub deployment record already carries the URL.
