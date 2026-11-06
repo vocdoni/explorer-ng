@@ -8,13 +8,13 @@ import { useTransactionByIndex } from '~hooks/useVoconeApi'
  *
  * Every other legacy URL is rewritten before the app mounts (`~utils/legacyUrl`),
  * but a position is not an identifier: only the indexer can say which hash sits
- * at index N of block H. So this one keeps a route, asks
- * `GET /chain/transactions/{height}/{index}`, and hands over to the real
- * transaction page.
+ * at index N of block H. So this one keeps a route, looks the position up in
+ * the block's transaction list (`useTransactionByIndex`), and hands over to the
+ * real transaction page.
  *
- * A block that has no such index answers 204 (`fetchJson` maps it to an object
- * without `txInfo`) — not an error worth a page of its own; the block itself is
- * the most useful thing to show instead. A gateway failure is different:
+ * A block that has no such index resolves to an object without `txInfo` — not
+ * an error worth a page of its own; the block itself is the most useful thing
+ * to show instead. A gateway failure is different:
  * redirecting there too would silently claim the position is empty, so it
  * renders as an error.
  */

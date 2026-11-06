@@ -260,7 +260,3 @@ export interface Validator {
 export interface ValidatorList {
   validators: Validator[]
 }
-
-export interface CountResult {
-  count: number
-}

@@ -7,7 +7,7 @@ import { HashDisplay } from '~components/shared/HashDisplay'
 import { PaginationControls } from '~components/shared/PaginationControls'
 import { TableRowsSkeleton } from '~components/shared/LoadingSkeleton'
 import { RelativeTime } from '~components/shared/RelativeTime'
-import { useAccountTransfers } from '~hooks/useAccounts'
+import { useChainTransfers } from '~hooks/useAccounts'
 import { totalPagesOf } from '~utils/pagination'
 
 interface Props {
@@ -16,10 +16,10 @@ interface Props {
 }
 
 /** Paginated token-transfer table for an account, shared between Account and
- *  Organization detail pages: `GET /accounts/{address}/transfers/page/{page}`. */
+ *  Organization detail pages: `GET /chain/transfers?accountId={address}&page={page}`. */
 export const TransfersTable = ({ address }: Props) => {
   const [page, setPage] = useState(0)
-  const transfers = useAccountTransfers(address, page)
+  const transfers = useChainTransfers(page, address)
   const rows = transfers.data?.transfers ?? []
 
   return (
