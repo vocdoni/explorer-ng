@@ -423,18 +423,20 @@ export const useElectionAnalytics = (
   }, [election, votesForTimeline, timeline.error, timeline.isFetching, timelineReady, progress])
 }
 
-/** `GET /chain/fees/reference/{electionId}/page/{p}` — the exact per-election
+/** `GET /chain/fees?reference={electionId}&page={page}` — the exact per-election
  *  cost breakdown. `reference` is the election id for election txs, but an IPFS
  *  URI for account-metadata txs, so rows are filtered defensively. */
 export const useElectionFees = (electionId: string, page = 0) => {
   const { apiUrl } = useApi()
+  const params = new URLSearchParams({ reference: electionId, page: String(page) })
   return useQuery({
     queryKey: ['election-fees', apiUrl, electionId, page],
     queryFn: async () => {
       try {
-        return await fetchJson<FeesList>(`${apiUrl}/chain/fees/reference/${electionId}/page/${page}`)
+        return await fetchJson<FeesList>(`${apiUrl}/chain/fees?${params.toString()}`)
       } catch (err) {
-        // No fees recorded reads as a 404/500 rather than an empty list.
+        // A page past the last one is a 404 (code 4057); it and any 500 render
+        // as an empty panel rather than an error.
         const status = (err as ApiError).status
         if (status === 404 || status === 500) return null
         throw err

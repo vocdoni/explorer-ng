@@ -4,7 +4,7 @@
  * These come from two related but differently-cased vocabularies:
  *  - `GET /chain/transactions/cost` keys them PascalCase ("NewProcess", "SendTokens"),
  *    straight from `genesis.TxCostNameToTxTypeMap`.
- *  - `GET /accounts/{address}/fees/page/{page}` reports `txType` snake_case
+ *  - `GET /chain/fees` reports `txType` snake_case
  *    ("new_process", "set_account_info_uri") — the same vocabulary, different casing.
  *
  * Both normalize to the same PascalCase key before lookup, so one map covers
