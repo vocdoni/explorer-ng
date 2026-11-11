@@ -79,8 +79,13 @@ export const ProofActions = ({ verification }: { verification: Verification }) =
       const anchor = document.createElement('a')
       anchor.href = href
       anchor.download = `vocdoni-vote-proof-${voteId.slice(0, 8)}.pdf`
+      // Chrome reads the filename asynchronously: revoking the URL in the same
+      // tick, or clicking a detached anchor, saves the file as the blob's UUID
+      // with no extension. Attach the anchor and revoke once the download started.
+      document.body.appendChild(anchor)
       anchor.click()
-      URL.revokeObjectURL(href)
+      anchor.remove()
+      setTimeout(() => URL.revokeObjectURL(href), 60_000)
     } catch {
       setFailed(true)
     } finally {
