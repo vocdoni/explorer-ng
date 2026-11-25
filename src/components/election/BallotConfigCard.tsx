@@ -130,10 +130,30 @@ const describeBallot = (election?: Election, results?: ElectionResultsView): Sen
     })
   }
 
-  // Only true of quadratic pricing: with a linear cost, spreading and concentrating
-  // cost exactly the same, so the sentence would be misleading on a plain budget ballot.
+  // minValue and minTotalCost are added in vocdoni-sequencer#17 and absent on LTS
+  // gateways. Show them only when explicitly set above 0.
+  const minValue = num(tally, 'minValue')
+  if (minValue !== undefined && minValue > 0) {
+    sentences.push({
+      text: `Each ballot field had to carry at least ${minValue}.`,
+      fields: `tallyMode.minValue = ${minValue}`,
+    })
+  }
+
   const costExponent = num(tally, 'costExponent')
   const maxTotalCost = num(tally, 'maxTotalCost')
+  const minTotalCost = num(tally, 'minTotalCost')
+  if (minTotalCost !== undefined && minTotalCost > 0) {
+    // costExponent = 0 means Σ 1 per field = answer count; otherwise it is a credit threshold.
+    const text =
+      costExponent === 0
+        ? `Voters had to give at least ${minTotalCost} answer${minTotalCost !== 1 ? 's' : ''}.`
+        : `The total ballot cost had to be at least ${minTotalCost}.`
+    sentences.push({
+      text,
+      fields: `tallyMode.minTotalCost = ${minTotalCost}`,
+    })
+  }
   if (kind === 'quadratic' && costExponent !== undefined && costExponent > 1) {
     sentences.push({
       text: `Support was priced with a cost exponent of ${costExponent} — buying n units of support for one option cost n^${costExponent} credits — so spreading support across options cost less than concentrating it.`,
