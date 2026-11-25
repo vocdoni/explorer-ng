@@ -126,6 +126,30 @@ export interface ElectionMetadata {
   [key: string]: unknown
 }
 
+/**
+ * On-chain ballot constraints applied by the scrutinizer.
+ *
+ * All fields are optional — older gateways (e.g. LTS prior to the voconed
+ * cutover) may omit some. Treat absent or zero `minValue`/`minTotalCost` as
+ * no minimum. The interface extends `Record<string, unknown>` so instances
+ * remain compatible with the `num`/`bool` helper signatures that read
+ * untyped gateway payloads.
+ */
+export interface TallyMode extends Record<string, unknown> {
+  maxCount?: number
+  maxValue?: number
+  maxVoteOverwrites?: number
+  maxTotalCost?: number
+  costExponent?: number
+  /** Minimum per-field value (every ballot field must be >= this). Absent or 0 = no minimum.
+   *  Added in vocdoni-sequencer#17; LTS gateways omit it. */
+  minValue?: number
+  /** Minimum total cost (Σ value^costExponent must be >= this). Absent or 0 = no minimum.
+   *  With costExponent = 0 this is a minimum answer count.
+   *  Added in vocdoni-sequencer#17; LTS gateways omit it. */
+  minTotalCost?: number
+}
+
 export interface Election {
   electionId: string
   organizationId: string
@@ -144,7 +168,7 @@ export interface Election {
   creationTime: string
   voteMode?: Record<string, unknown>
   electionMode?: Record<string, unknown>
-  tallyMode?: Record<string, unknown>
+  tallyMode?: TallyMode
   /** Inline election metadata (title, description, questions) — the only source
    *  of human-readable names anywhere in the API. */
   metadata?: ElectionMetadata
